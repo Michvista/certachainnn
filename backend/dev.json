@@ -82,7 +82,7 @@
       "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
       "studentName": "John Doe",
       "course": "Master in Fashion",
-      "studentWallet": "45gSa4hgyeiuKncF5UN5zA9fwNq7yj4mGxVS3obymYsU",
+      "studentWallet": "JCK92jTuWrJHxUssgUWgtwFXTevsLPyCQaQDDvKd31Vv",
       "ipfsUrl": "ipfs://QmZcRK2Tt5kep3uc7MnqwxFFVAof3BkgBJuynXXv3sMjvZ",
       "fileUrl": "ipfs://QmRP42zPASHPYfRTeY2uCKhQ3oA6HkhDW1mbyFKFpe5UM8",
       "id": 8,
@@ -92,9 +92,9 @@
   "custodialWallets": [
     {
       "email": "michvista09@gmail.com",
-      "publicKey": "45gSa4hgyeiuKncF5UN5zA9fwNq7yj4mGxVS3obymYsU",
-      "privateKey": "89ee4f0533266006e3f23c7055d97c6413954f8a55f2d152fa4c626e979c1fed2dc5fadd7329d5fdb78fe7ffe44d4c49fddd67779948d7dcb29970b1fbc695eb",
-      "claimToken": "f7fb7aea8447b8d99dc0ddc0775a2c3e0cba8f4a39906d168ed17e6060c267e5",
+      "publicKey": "JCK92jTuWrJHxUssgUWgtwFXTevsLPyCQaQDDvKd31Vv",
+      "privateKey": "8f0a5cf1d5bab37114072c82faff03fd3453d0275eea8c67a3f57a5aad91dbabff7c936b2b5214f7d1386b01d561ea6dbc7c557cd0e6da279f41441bdb3eed9d",
+      "claimToken": "7e7f5a151bedcb7870fe46573829b2e86fb58d80a12c6ad5fe1a845b1775a768",
       "id": 1,
       "createdAt": "2026-05-02T20:14:05.076Z"
     }
