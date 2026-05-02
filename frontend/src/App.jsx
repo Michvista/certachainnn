@@ -8,6 +8,7 @@ import SkillVerifier from './pages/SkillVerifier';
 import IssueCertificate from './pages/IssueCertificate';
 import ClaimCredentials from './pages/ClaimCredentials';
 import StudentRegistration from './pages/StudentRegistration';
+import EmailCredentialViewer from './pages/EmailCredentialViewer';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/dashboard/overview" element={<Overview />} />
           <Route path="/dashboard/institution" element={<Institution />} />
           <Route path="/dashboard/issue" element={<IssueCertificate />} />
+          <Route path="/dashboard/email-viewer" element={<EmailCredentialViewer />} />
 
           {/* Skill Verifier */}
           <Route path="/verifier" element={<SkillVerifier />} />

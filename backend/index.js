@@ -128,6 +128,11 @@ const claimSchema = z.object({
   certId: z.string().min(1, "Certificate ID is required")
 });
 
+const emailCredentialLookupSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  certId: z.string().min(1, "Certificate ID is required")
+});
+
 // Validation Middleware
 const validateRequest = (schema) => (req, res, next) => {
   try {
@@ -327,6 +332,51 @@ app.get('/api/students/:walletAddress/credentials', async (req, res) => {
         ...certificate,
         ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
         fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
+        program: PROGRAM_DETAILS
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/students/email-credentials', validateRequest(emailCredentialLookupSchema), async (req, res) => {
+  try {
+    const { email, certId } = req.body;
+
+    const wallet = await prisma.custodialWallet.findUnique({
+      where: { email }
+    });
+
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'No email-issued wallet found for this email address' });
+    }
+
+    const certificate = await prisma.certificate.findUnique({
+      where: { certId }
+    });
+
+    if (!certificate) {
+      return res.status(404).json({ success: false, error: 'Certificate not found' });
+    }
+
+    if (certificate.studentWallet !== wallet.publicKey) {
+      return res.status(403).json({ success: false, error: 'This certificate does not belong to the supplied email credentials' });
+    }
+
+    const credentials = await prisma.certificate.findMany({
+      where: { studentWallet: wallet.publicKey },
+      orderBy: { issueDate: 'desc' }
+    });
+
+    res.status(200).json({
+      success: true,
+      email,
+      walletAddress: wallet.publicKey,
+      credentials: credentials.map((item) => ({
+        ...item,
+        ipfsGatewayUrl: toGatewayUrl(item.ipfsUrl),
+        fileGatewayUrl: toGatewayUrl(item.fileUrl),
         program: PROGRAM_DETAILS
       }))
     });

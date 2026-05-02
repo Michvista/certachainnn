@@ -101,6 +101,18 @@ export const getStudentCredentials = async (walletAddress) => {
   return response.json();
 };
 
+export const getEmailIssuedCredentials = async (email, certId) => {
+  const response = await fetch(`${API_BASE_URL}/students/email-credentials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, certId })
+  });
+  if (!response.ok) {
+    throw new Error(await parseError(response, 'Failed to fetch email-issued credentials'));
+  }
+  return response.json();
+};
+
 export const generateSkillReport = async (credentials) => {
   const response = await fetch(`${API_BASE_URL}/ai/skill-report`, {
     method: 'POST',

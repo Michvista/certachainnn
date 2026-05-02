@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   Plus,
   Mail,
+  SearchCheck,
   Menu,
   X
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const Sidebar = () => {
     { name: 'Issue Credentials', icon: <Award size={18} />, path: '/dashboard/issue' },
     { name: 'AI Skill Verifier', icon: <BrainCircuit size={18} />, path: '/verifier' },
     { name: 'Claim Wallet', icon: <Mail size={18} />, path: '/claim' },
+    { name: 'View By Email', icon: <SearchCheck size={18} />, path: '/dashboard/email-viewer' },
   ];
 
   return (
@@ -94,4 +96,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-
