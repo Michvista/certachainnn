@@ -3,9 +3,9 @@ const testAI = async () => {
     { course: "Advanced Solana Smart Contracts" },
     { course: "Web3 Security Fundamentals" }
   ];
-  
+
   try {
-    const res = await fetch('http://localhost:3050/api/ai/skill-report', {
+    const res = await fetch('http://localhost:4002/api/ai/skill-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credentials })

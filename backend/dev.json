@@ -1,4 +1,102 @@
 {
-  "certificates": [],
-  "custodialWallets": []
+  "certificates": [
+    {
+      "certId": "d3c859a6-d348-43d9-a5a9-e3584a0f5fb5",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master of Arts",
+      "studentWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "ipfsUrl": "ipfs://QmRoezsBTv19rTGr6vVXZGmb3XAd26oENpxHY5ZPec9axo",
+      "fileUrl": "ipfs://QmVEwaMGLr37CMJKbb9UdZGtBwiMiFn2XqUWyYdYtSDhLc",
+      "id": 1,
+      "issueDate": "2026-05-02T20:02:56.202Z"
+    },
+    {
+      "certId": "cfd1a014-6027-4557-973a-667c8df1a959",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master of comp sci",
+      "studentWallet": "4Mu3iziqYKiq13McyYeAEeT1JLDNGj9Zmi5BEJJH4vSX",
+      "ipfsUrl": "ipfs://QmS3jYr4qPdEsHzWptaSWs2bx93k4cGF2b93HCEL5hxpS2",
+      "fileUrl": "ipfs://QmRP42zPASHPYfRTeY2uCKhQ3oA6HkhDW1mbyFKFpe5UM8",
+      "id": 2,
+      "issueDate": "2026-05-02T20:14:03.775Z"
+    },
+    {
+      "certId": "8a31a49a-17fa-48cd-9820-442bb3ae4108",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master in Fashion",
+      "studentWallet": null,
+      "ipfsUrl": "ipfs://QmRYg6UAdLwS8Rdob9y6xeCySMHvXcDw3mYwUzoLQPSgg3",
+      "fileUrl": "ipfs://QmRP42zPASHPYfRTeY2uCKhQ3oA6HkhDW1mbyFKFpe5UM8",
+      "id": 3,
+      "issueDate": "2026-05-02T20:31:25.285Z"
+    },
+    {
+      "certId": "b3fd889e-8b81-4a7c-82b3-8ccf1164ce9d",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master of Fashion",
+      "studentWallet": "CbE8i5vt9LtQUHpzQ3MFCZfeKqTqPfdqza6QWHjFWAsy",
+      "ipfsUrl": "ipfs://QmYDxPr3dPBjmgD3FAWm1h4mHJb2bgQAFphshvcu5ZaRn4",
+      "fileUrl": "ipfs://QmXWthMu7o6JBTo2fpJT8nW98pR5FgfrDmpm2uWvbfjbfP",
+      "id": 4,
+      "issueDate": "2026-05-02T20:42:51.722Z"
+    },
+    {
+      "certId": "95f2b7d4-bd48-4171-8a34-10b34fbbe284",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master of Fashion",
+      "studentWallet": "Bsg1o76yT8cD9EcgX6sFPMBwDYEMvNsbjvJAsCVFVVJ",
+      "ipfsUrl": "ipfs://QmdkWizGN8MHJruurzkzhdrWXDZE1mYz2FNqkQvzshJ8yF",
+      "fileUrl": "ipfs://Qme3KUwKE64jkg1J663wDnAqLR5L8f7phWayCzCsXfcECU",
+      "id": 5,
+      "issueDate": "2026-05-02T20:46:11.488Z"
+    },
+    {
+      "certId": "4dfa021f-a032-49fd-bd98-1c2e7a126f57",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master of Fashion",
+      "studentWallet": "CJvy173wgEozoCKL9gfRAvbQG9xtqtJoBqJouG4eiRyo",
+      "ipfsUrl": "ipfs://Qmcr2BEnQS12iUJdas4EaDVE91X1jH94GNpFm7CTxKm8H7",
+      "fileUrl": "ipfs://Qme3KUwKE64jkg1J663wDnAqLR5L8f7phWayCzCsXfcECU",
+      "id": 6,
+      "issueDate": "2026-05-02T20:47:39.603Z"
+    },
+    {
+      "certId": "fce2b419-cbd7-4074-b11e-46dd335d7fb8",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master in Fashion",
+      "studentWallet": "8RXxbx5ZT7iwuH1dAVxH5i6on4JaMRjGbJ3ptYwbG9Mb",
+      "ipfsUrl": "ipfs://Qmbres4ZKrxurynv5fBcft4PcXKeoWdNTyynZ9TnKNXtN9",
+      "fileUrl": "ipfs://QmRP42zPASHPYfRTeY2uCKhQ3oA6HkhDW1mbyFKFpe5UM8",
+      "id": 7,
+      "issueDate": "2026-05-02T20:49:48.062Z"
+    },
+    {
+      "certId": "c1beac0c-237b-4686-8dd8-ec61d8247275",
+      "institutionWallet": "FYPb8QapUBSvVHrzqNej29EQsAX5no2uBKnvXnfH8yj",
+      "studentName": "John Doe",
+      "course": "Master in Fashion",
+      "studentWallet": "45gSa4hgyeiuKncF5UN5zA9fwNq7yj4mGxVS3obymYsU",
+      "ipfsUrl": "ipfs://QmZcRK2Tt5kep3uc7MnqwxFFVAof3BkgBJuynXXv3sMjvZ",
+      "fileUrl": "ipfs://QmRP42zPASHPYfRTeY2uCKhQ3oA6HkhDW1mbyFKFpe5UM8",
+      "id": 8,
+      "issueDate": "2026-05-02T20:52:20.614Z"
+    }
+  ],
+  "custodialWallets": [
+    {
+      "email": "michvista09@gmail.com",
+      "publicKey": "45gSa4hgyeiuKncF5UN5zA9fwNq7yj4mGxVS3obymYsU",
+      "privateKey": "89ee4f0533266006e3f23c7055d97c6413954f8a55f2d152fa4c626e979c1fed2dc5fadd7329d5fdb78fe7ffe44d4c49fddd67779948d7dcb29970b1fbc695eb",
+      "claimToken": "f7fb7aea8447b8d99dc0ddc0775a2c3e0cba8f4a39906d168ed17e6060c267e5",
+      "id": 1,
+      "createdAt": "2026-05-02T20:14:05.076Z"
+    }
+  ]
 }
