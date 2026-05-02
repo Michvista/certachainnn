@@ -8,3 +8,7 @@ node_modules
 *.db
 *.db-journal
 dev.db
+
+# Frontend Folder
+certachainn/
+certachainn
