@@ -48,6 +48,9 @@ const IssueCertificate = () => {
     setSuccess(null);
     setError(null);
 
+    // Capture email BEFORE resetting the form so success message can display it
+    const submittedEmail = formData.student_email;
+
     try {
       const data = new FormData();
       data.append('institutionWallet', publicKey.toBase58());
@@ -55,6 +58,8 @@ const IssueCertificate = () => {
       const studentDetails = {
         ...formData,
         student_wallet: issueMethod === 'wallet' ? formData.student_wallet : null,
+        // Always pass student_email so backend can auto-send claim email in one request
+        student_email: issueMethod === 'email' ? formData.student_email : undefined,
         name: `${formData.course} Certificate`,
         description: `Verified completion of ${formData.course}`
       };
@@ -67,17 +72,8 @@ const IssueCertificate = () => {
 
       const res = await issueCertificate(data);
       if (res.success) {
-        // If issued via email, trigger the claim process automatically
-        if (issueMethod === 'email') {
-          try {
-            await claimWallet(formData.student_email, res.certId);
-          } catch (claimErr) {
-            console.error("Auto-claim notification failed:", claimErr);
-            // We don't throw here so the user still sees the success of the minting itself
-          }
-        }
-
-        setSuccess(res);
+        // Store the email in the response so success banner can show it
+        setSuccess({ ...res, emailSentTo: submittedEmail });
         setFormData({
           student_name: '',
           student_wallet: '',
@@ -122,7 +118,7 @@ const IssueCertificate = () => {
                       <CheckCircle className="text-emerald-500 shrink-0" size={20} />
                       <div>
                         <p className="text-emerald-800 font-bold text-sm">Certificate Issued Successfully!</p>
-                        {issueMethod === 'email' && <p className="text-emerald-600 text-xs mt-1">Claim email sent to {formData.student_email}.</p>}
+                        {success.emailSentTo && <p className="text-emerald-600 text-xs mt-1">Claim email sent to <strong>{success.emailSentTo}</strong>.</p>}
                         <p className="text-emerald-600 text-xs mt-1">Transaction recorded on Solana Devnet.</p>
                         {success.fileGatewayUrl && (
                           <a 

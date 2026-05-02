@@ -158,6 +158,7 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
       console.error("Pinata metadata upload failed (Network issue?), using fallback:", pinataErr.message);
       ipfsUrl = `ipfs://mock-meta-hash-${certId}`;
     }
+
     // 3. Save to DB
     await prisma.certificate.create({
       data: {
@@ -171,12 +172,58 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
       }
     });
 
+    // 4. If issued via email, auto-create custodial wallet and send claim email (all in one request)
+    let claimLink = null;
+    const studentEmail = studentDetails.student_email;
+    if (studentEmail) {
+      try {
+        const newWallet = Keypair.generate();
+        const publicKey = newWallet.publicKey.toBase58();
+        const privateKey = Buffer.from(newWallet.secretKey).toString('hex');
+        const claimToken = crypto.randomBytes(32).toString('hex');
+        claimLink = `${CLIENT_APP_URL.replace(/\/$/, '')}/claim?token=${claimToken}`;
+
+        await prisma.custodialWallet.upsert({
+          where: { email: studentEmail },
+          update: { publicKey, privateKey, claimToken },
+          create: { email: studentEmail, publicKey, privateKey, claimToken }
+        });
+
+        await prisma.certificate.update({
+          where: { certId },
+          data: { studentWallet: publicKey }
+        });
+
+        await transporter.sendMail({
+          from: `"CertaChain" <${process.env.EMAIL_USER}>`,
+          to: studentEmail,
+          subject: `Your Certificate of ${studentDetails.course} is Ready to Claim`,
+          text: `Congratulations ${studentDetails.student_name}! Your institution has issued you a certificate on Solana. Claim your wallet here: ${claimLink}`,
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px;background:#f8f9ff;border-radius:12px;">
+              <h2 style="color:#4f46e5;">🎓 Your Certificate is Ready!</h2>
+              <p>Hi <strong>${studentDetails.student_name}</strong>,</p>
+              <p>Your institution has issued you a <strong>${studentDetails.course}</strong> certificate, minted on the Solana blockchain.</p>
+              <a href="${claimLink}" style="display:inline-block;background:#4f46e5;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+                Claim Your Certificate Wallet
+              </a>
+              <p style="color:#888;font-size:12px;">Certificate ID: ${certId}</p>
+            </div>
+          `
+        });
+        console.log(`Claim email sent successfully to ${studentEmail}`);
+      } catch (emailErr) {
+        console.error("Auto-claim email failed (non-fatal):", emailErr.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: "Certificate issued successfully",
       certId,
       ipfsUrl,
       fileUrl,
+      claimLink,
       ipfsGatewayUrl: toGatewayUrl(ipfsUrl),
       fileGatewayUrl: toGatewayUrl(fileUrl),
       program: PROGRAM_DETAILS
@@ -186,6 +233,7 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
     res.status(500).json({ success: false, error: "Failed to issue certificate: " + error.message });
   }
 });
+
 
 app.get('/api/certificates/verify/:certId', async (req, res) => {
   try {
