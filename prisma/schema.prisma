@@ -15,6 +15,7 @@ model Certificate {
   studentName       String?
   course            String?
   ipfsUrl           String?
+  fileUrl           String?
   issueDate         DateTime @default(now())
 }
 

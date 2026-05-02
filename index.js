@@ -8,6 +8,8 @@ const { Keypair, PublicKey } = require('@solana/web3.js');
 const crypto = require('crypto');
 const { z } = require('zod');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const stream = require('stream');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +17,9 @@ const CLIENT_APP_URL = process.env.CLIENT_APP_URL || 'http://localhost:5173';
 
 app.use(cors());
 app.use(express.json());
+
+// Multer setup for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 const prisma = new PrismaClient();
 
@@ -83,19 +88,42 @@ const claimSchema = z.object({
 // Validation Middleware
 const validateRequest = (schema) => (req, res, next) => {
   try {
-    schema.parse(req.body);
+    // For multipart/form-data, we need to parse studentDetails string if it exists
+    const dataToValidate = req.body.studentDetails && typeof req.body.studentDetails === 'string'
+      ? { ...req.body, studentDetails: JSON.parse(req.body.studentDetails) }
+      : req.body;
+    
+    schema.parse(dataToValidate);
     next();
   } catch (error) {
     return res.status(400).json({ success: false, error: error.errors });
   }
 };
 
-app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, res) => {
+app.post('/api/certificates/issue', upload.single('file'), validateRequest(issueSchema), async (req, res) => {
   try {
-    const { institutionWallet, studentDetails } = req.body;
+    const { institutionWallet, studentDetails: studentDetailsStr } = req.body;
+    const studentDetails = typeof studentDetailsStr === 'string' ? JSON.parse(studentDetailsStr) : studentDetailsStr;
+    
     const certId = crypto.randomUUID();
     const issueDate = new Date().toISOString().split('T')[0];
+    let fileUrl = null;
 
+    // 1. Upload File to IPFS if present
+    if (req.file) {
+      const readableStreamForFile = new stream.Readable();
+      readableStreamForFile.push(req.file.buffer);
+      readableStreamForFile.push(null);
+
+      const fileOptions = {
+        pinataMetadata: { name: `CertFile-${certId}` }
+      };
+
+      const filePinRes = await pinata.pinFileToIPFS(readableStreamForFile, fileOptions);
+      fileUrl = `ipfs://${filePinRes.IpfsHash}`;
+    }
+
+    // 2. Upload Metadata to IPFS
     const metadataPayload = {
       name: studentDetails.name || 'Certificate of Completion',
       description: studentDetails.description || `Issued by ${studentDetails.institution}`,
@@ -106,16 +134,18 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
       grade: studentDetails.grade,
       issue_date: issueDate,
       certificate_id: certId,
+      file_url: fileUrl,
       valid: true
     };
 
     const options = {
-      pinataMetadata: { name: `Certificate-${studentDetails.student_name}` }
+      pinataMetadata: { name: `CertMeta-${certId}` }
     };
 
     const pinataRes = await pinata.pinJSONToIPFS(metadataPayload, options);
     const ipfsUrl = `ipfs://${pinataRes.IpfsHash}`;
 
+    // 3. Save to DB
     await prisma.certificate.create({
       data: {
         certId,
@@ -123,7 +153,8 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
         studentName: studentDetails.student_name,
         course: studentDetails.course,
         studentWallet: studentDetails.student_wallet || null,
-        ipfsUrl
+        ipfsUrl,
+        fileUrl
       }
     });
 
@@ -132,7 +163,9 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
       message: "Certificate issued successfully",
       certId,
       ipfsUrl,
+      fileUrl,
       ipfsGatewayUrl: toGatewayUrl(ipfsUrl),
+      fileGatewayUrl: toGatewayUrl(fileUrl),
       program: PROGRAM_DETAILS
     });
   } catch (error) {
@@ -166,6 +199,8 @@ app.get('/api/certificates/verify/:certId', async (req, res) => {
       issueDate: certificate.issueDate,
       ipfsUrl: certificate.ipfsUrl,
       ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+      fileUrl: certificate.fileUrl,
+      fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
       program: PROGRAM_DETAILS
     });
   } catch (error) {
@@ -188,6 +223,7 @@ app.get('/api/students/:walletAddress/credentials', async (req, res) => {
       credentials: credentials.map((certificate) => ({
         ...certificate,
         ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+        fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
         program: PROGRAM_DETAILS
       }))
     });
@@ -210,7 +246,7 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate the report based on these credentials. Return ONLY JSON without markdown formatting.`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       systemInstruction
     });
     const result = await model.generateContent(userPrompt);
@@ -274,7 +310,6 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
       console.log(`Email sent successfully to ${email}`);
     } catch (emailErr) {
       console.error("Failed to send claim email. Have you set up your Nodemailer SMTP credentials?:", emailErr.message);
-      // We still return 200 because the wallet was generated successfully
     }
 
     res.status(200).json({
@@ -292,9 +327,6 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
 app.get('/api/stats', async (req, res) => {
   try {
     const totalCertificates = await prisma.certificate.count();
-    
-    // In a real app, 'totalStudents' might be distinct wallets or users
-    // Here we count distinct student wallets
     const distinctStudents = await prisma.certificate.findMany({
       select: { studentWallet: true },
       distinct: ['studentWallet']
@@ -323,6 +355,7 @@ app.get('/api/certificates', async (req, res) => {
       certificates: certificates.map((certificate) => ({
         ...certificate,
         ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+        fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
         program: PROGRAM_DETAILS
       }))
     });
