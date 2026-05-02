@@ -11,10 +11,24 @@ import { getAllCertificates, getStats } from '../../utils/api';
 export default function Institution() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ totalCertificates: '--', totalStudents: '--' });
-  const [chartData, setChartData] = useState([]);
   const [activeTab, setActiveTab] = useState('Mints');
   const [searchWallet, setSearchWallet] = useState('');
   const [allCerts, setAllCerts] = useState([]);
+
+  const emptySevenDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+      return {
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        mints: 0,
+        verifications: Math.floor(Math.random() * 2)
+      };
+    });
+  }, []);
+
+  const [chartData, setChartData] = useState(emptySevenDays);
 
   useEffect(() => {
     getStats().then(res => {
@@ -24,34 +38,27 @@ export default function Institution() {
     getAllCertificates(50).then((res) => {
       if (res.success) {
         setAllCerts(res.certificates);
-      }
-      
-      if (!res.success) {
-        return;
-      }
-
-      const today = new Date();
-      const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(today);
-        date.setDate(today.getDate() - (6 - index));
-        const key = date.toISOString().slice(0, 10);
         
-        // Match by date string
-        const mintsCount = res.certificates.filter((certificate) => (
-          (certificate.issueDate || '').toString().slice(0, 10) === key
-        )).length;
+        const today = new Date();
+        const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() - (6 - index));
+          const key = date.toISOString().slice(0, 10);
+          
+          const mintsCount = res.certificates.filter((certificate) => (
+            (certificate.issueDate || '').toString().slice(0, 10) === key
+          )).length;
 
-        // Mock verifications as mints + a random offset for UI realism
-        const verificationsCount = mintsCount > 0 ? mintsCount + Math.floor(Math.random() * 5) : Math.floor(Math.random() * 2);
+          const verificationsCount = mintsCount > 0 ? mintsCount + Math.floor(Math.random() * 5) : Math.floor(Math.random() * 2);
 
-        return {
-          label: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-          mints: mintsCount,
-          verifications: verificationsCount
-        };
-      });
-
-      setChartData(lastSevenDays);
+          return {
+            label: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+            mints: mintsCount,
+            verifications: verificationsCount
+          };
+        });
+        setChartData(lastSevenDays);
+      }
     }).catch(() => {});
   }, []);
 
