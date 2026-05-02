@@ -267,6 +267,18 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+app.get('/api/certificates', async (req, res) => {
+  try {
+    const certificates = await prisma.certificate.findMany({
+      orderBy: { issueDate: 'desc' },
+      take: 10
+    });
+    res.status(200).json({ success: true, certificates });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`CertaChain API running on port ${PORT}`);
 });
