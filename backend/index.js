@@ -73,7 +73,7 @@ const issueSchema = z.object({
     institution: z.string().min(1, "Institution is required"),
     course: z.string().min(1, "Course is required"),
     student_name: z.string().min(1, "Student name is required"),
-    student_wallet: z.string().optional(),
+    student_wallet: z.string().nullable().optional(),
     grade: z.string().min(1, "Grade is required")
   })
 });
@@ -240,9 +240,10 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
 
     const systemInstruction = `You are a brutally honest and highly critical professional credential analyst. Your job is to verify professional competencies based on blockchain records AND uploaded certificate content. 
     BE CRITICAL: If a student has few credentials, highlight the gaps aggressively. If grades are average, do not sugarcoat. 
+    IMPORTANT: You MUST explicitly mention in your summary if you scanned and analyzed an uploaded file (e.g. "File analysis confirmed..." or "No uploaded files detected."). 
     You MUST return ONLY a JSON object matching this exact schema:
 {
-  "summary": "A brutally honest 1-2 sentence overview. Highlight weaknesses.",
+  "summary": "A brutally honest 1-2 sentence overview. Must explicitly state if uploaded file contents were analyzed.",
   "skillsVerified": ["Skill 1", "Skill 2"],
   "recommendations": ["Aggressive skill gap 1", "Aggressive skill gap 2"],
   "overallScore": 0-100 (Be strict)
