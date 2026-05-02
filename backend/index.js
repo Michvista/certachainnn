@@ -20,6 +20,15 @@ const CLIENT_APP_URL = process.env.CLIENT_APP_URL || 'http://localhost:5173';
 app.use(cors());
 app.use(express.json());
 
+// Vercel routes all backend traffic to /_/backend, but our Express routes expect /api/...
+// This middleware strips the Vercel mounting prefix so Express finds the correct routes.
+app.use((req, res, next) => {
+  if (req.url.startsWith('/_/backend')) {
+    req.url = req.url.replace('/_/backend', '');
+  }
+  next();
+});
+
 // Multer setup for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
