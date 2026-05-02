@@ -287,27 +287,6 @@ app.get('/api/students/:walletAddress/credentials', async (req, res) => {
       orderBy: { issueDate: 'desc' }
     });
 
-    // HACKATHON FIX: Vercel serverless wipes /tmp between cold starts.
-    // We use a deterministic mock based on the wallet address so the data is CONSISTENT
-    // even if the database is wiped. This makes the demo look 100% real!
-    if (credentials.length === 0 && process.env.VERCEL === '1') {
-      console.log(`[Vercel Hack] Generating deterministic mock for wallet ${walletAddress}`);
-      
-      // Use the wallet address to create a consistent "Demo" name
-      const shortAddr = walletAddress.slice(0, 4);
-      const studentName = `Graduate ${shortAddr}`;
-      
-      credentials = [{
-        certId: `demo-${walletAddress.slice(0, 8)}`,
-        institutionWallet: 'certachain-academy-id',
-        studentName: studentName,
-        course: 'Blockchain Architecture & Solana Development',
-        studentWallet: walletAddress,
-        ipfsUrl: 'ipfs://mock-credential-hash',
-        fileUrl: null,
-        issueDate: "2026-05-01T12:00:00.000Z"
-      }];
-    }
 
     res.status(200).json({
       success: true,
