@@ -7,6 +7,7 @@ import Institution from './pages/Dashboard/Institution';
 import SkillVerifier from './pages/SkillVerifier';
 import IssueCertificate from './pages/IssueCertificate';
 import ClaimCredentials from './pages/ClaimCredentials';
+import StudentRegistration from './pages/StudentRegistration';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           {/* Student profile - requires wallet connection */}
           <Route path="/profile/:id" element={<StudentProfile />} />
           <Route path="/profile/me" element={<StudentProfile />} />
+          <Route path="/student/signup" element={<StudentRegistration />} />
           <Route path="/claim" element={<ClaimCredentials />} />
 
           {/* Dashboard */}

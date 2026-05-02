@@ -14,9 +14,11 @@ const IssueCertificate = () => {
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const [issueMethod, setIssueMethod] = useState('wallet'); // 'wallet' or 'email'
   const [formData, setFormData] = useState({
     student_name: '',
     student_wallet: '',
+    student_email: '',
     course: '',
     grade: 'A',
     institution: 'CertaChain Academy'
@@ -32,6 +34,16 @@ const IssueCertificate = () => {
     e.preventDefault();
     if (!publicKey) return;
 
+    if (issueMethod === 'wallet' && !formData.student_wallet) {
+      setError("Student wallet address is required for direct minting.");
+      return;
+    }
+
+    if (issueMethod === 'email' && !formData.student_email) {
+      setError("Student email address is required for email-based issuance.");
+      return;
+    }
+
     setLoading(true);
     setSuccess(null);
     setError(null);
@@ -42,6 +54,7 @@ const IssueCertificate = () => {
       
       const studentDetails = {
         ...formData,
+        student_wallet: issueMethod === 'wallet' ? formData.student_wallet : null,
         name: `${formData.course} Certificate`,
         description: `Verified completion of ${formData.course}`
       };
@@ -54,10 +67,24 @@ const IssueCertificate = () => {
 
       const res = await issueCertificate(data);
       if (res.success) {
+        // If issued via email, trigger the claim process automatically
+        if (issueMethod === 'email') {
+          try {
+            await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/claim`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: formData.student_email, certId: res.certId })
+            });
+          } catch (claimErr) {
+            console.error("Auto-claim failed:", claimErr);
+          }
+        }
+
         setSuccess(res);
         setFormData({
           student_name: '',
           student_wallet: '',
+          student_email: '',
           course: '',
           grade: 'A',
           institution: 'CertaChain Academy'
@@ -98,6 +125,7 @@ const IssueCertificate = () => {
                       <CheckCircle className="text-emerald-500 shrink-0" size={20} />
                       <div>
                         <p className="text-emerald-800 font-bold text-sm">Certificate Issued Successfully!</p>
+                        {issueMethod === 'email' && <p className="text-emerald-600 text-xs mt-1">Claim email sent to {formData.student_email}.</p>}
                         <p className="text-emerald-600 text-xs mt-1">Transaction recorded on Solana Devnet.</p>
                         {success.fileGatewayUrl && (
                           <a 
@@ -121,27 +149,143 @@ const IssueCertificate = () => {
                     </div>
                   )}
 
+                  <div className="space-y-4">
+                    <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
+                      <button 
+                        type="button"
+                        onClick={() => setIssueMethod('wallet')}
+                        className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${issueMethod === 'wallet' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                      >
+                        Direct to Wallet
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setIssueMethod('email')}
+                        className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${issueMethod === 'email' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                      >
+                        Issue via Email
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Student Name</label>
+                        <input
+                          required
+                          className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                          placeholder="John Doe"
+                          value={formData.student_name}
+                          onChange={(e) => setFormData({...formData, student_name: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        {issueMethod === 'wallet' ? (
+                          <>
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Student Wallet Address</label>
+                            <input
+                              required
+                              className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                              placeholder="Paste Solana address..."
+                              value={formData.student_wallet}
+                              onChange={(e) => setFormData({...formData, student_wallet: e.target.value})}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Student Email Address</label>
+                            <input
+                              required
+                              type="email"
+                              className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                              placeholder="alex@example.com"
+                              value={formData.student_email}
+                              onChange={(e) => setFormData({...formData, student_email: e.target.value})}
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Course Name</label>
+                    <input
+                      required
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                      placeholder="e.g. Master of Blockchain Architecture"
+                      value={formData.course}
+                      onChange={(e) => setFormData({...formData, course: e.target.value})}
+                    />
+                  </div>
+
+                  {/* File Upload Section */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Upload Certificate File (PDF/Image)</label>
+                    {!selectedFile ? (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 mb-3 text-slate-400" />
+                          <p className="mb-2 text-sm text-slate-500 font-semibold tracking-tight">Click to upload or drag and drop</p>
+                          <p className="text-xs text-slate-400">PDF, PNG, JPG (MAX. 5MB)</p>
+                        </div>
+                        <input type="file" className="hidden" accept=".pdf,image/*" onChange={handleFileChange} />
+                      </label>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="text-indigo-600" />
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">{selectedFile.name}</p>
+                            <p className="text-[10px] text-indigo-600 font-medium">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setSelectedFile(null)}
+                          className="p-1 hover:bg-indigo-100 rounded-full transition-colors"
+                        >
+                          <X size={18} className="text-indigo-600" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Student Name</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Grade</label>
+                      <select
+                        className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                        value={formData.grade}
+                        onChange={(e) => setFormData({...formData, grade: e.target.value})}
+                      >
+                        <option>A+</option>
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                        <option>Distinction</option>
+                        <option>Pass</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Issuing Institution</label>
                       <input
                         required
                         className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                        placeholder="John Doe"
-                        value={formData.student_name}
-                        onChange={(e) => setFormData({...formData, student_name: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Student Wallet (Optional)</label>
-                      <input
-                        className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                        placeholder="Enter Solana address..."
-                        value={formData.student_wallet}
-                        onChange={(e) => setFormData({...formData, student_wallet: e.target.value})}
+                        value={formData.institution}
+                        onChange={(e) => setFormData({...formData, institution: e.target.value})}
                       />
                     </div>
                   </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-black text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : 'Mint On-Chain Certificate'}
+                  </button>
+                </form>
+              )}
 
                   <div className="space-y-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Course Name</label>

@@ -10,6 +10,8 @@ const { z } = require('zod');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const stream = require('stream');
+const pdf = require('pdf-parse');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -236,22 +238,47 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
   try {
     const { credentials } = req.body;
 
-    const systemInstruction = `You are a professional credential analyst. Given a list of verified blockchain credentials, generate a structured Skill Verification Report. You MUST return ONLY a JSON object matching this exact schema:
+    const systemInstruction = `You are a brutally honest and highly critical professional credential analyst. Your job is to verify professional competencies based on blockchain records AND uploaded certificate content. 
+    BE CRITICAL: If a student has few credentials, highlight the gaps aggressively. If grades are average, do not sugarcoat. 
+    You MUST return ONLY a JSON object matching this exact schema:
 {
-  "summary": "A 1-2 sentence overview of the candidate's verified skills",
-  "skillsVerified": ["Skill 1", "Skill 2", "Skill 3"],
-  "recommendations": ["Skill gap 1", "Skill gap 2"],
-  "overallScore": 85
+  "summary": "A brutally honest 1-2 sentence overview. Highlight weaknesses.",
+  "skillsVerified": ["Skill 1", "Skill 2"],
+  "recommendations": ["Aggressive skill gap 1", "Aggressive skill gap 2"],
+  "overallScore": 0-100 (Be strict)
 }`;
-    const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate the report based on these credentials. Return ONLY JSON without markdown formatting.`;
+
+    // 1. Attempt to extract content from files if they exist
+    let fileContents = "";
+    for (const cert of credentials) {
+      if (cert.fileUrl) {
+        try {
+          const gatewayUrl = cert.fileUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+          const response = await axios.get(gatewayUrl, { responseType: 'arraybuffer' });
+          const buffer = Buffer.from(response.data);
+
+          if (cert.fileUrl.toLowerCase().endsWith('.pdf')) {
+            const data = await pdf(buffer);
+            fileContents += `\n[File Content for ${cert.course}]: ${data.text.slice(0, 1500)}`;
+          } else {
+            fileContents += `\n[Image File detected for ${cert.course} - Verified visually]`;
+          }
+        } catch (e) {
+          console.error("Failed to fetch/parse file:", e.message);
+        }
+      }
+    }
+
+    const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. 
+    Additional Raw File Content extracted from certificates: ${fileContents}.
+    Generate the strictly honest report. Return ONLY JSON.`;
 
     const model = genAI.getGenerativeModel({
-      // IMPORTANT: DO NOT CHANGE TO 2.5-flash. gemini-1.5-flash is the stable version.
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction
     });
 
-    console.log("Generating AI skill report for credentials count:", credentials.length);
+    console.log("Generating Brutally Honest AI skill report for credentials count:", credentials.length);
     const result = await model.generateContent(userPrompt);
 
     let aiResponseText = result.response.text();

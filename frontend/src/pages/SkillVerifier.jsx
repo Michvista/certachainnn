@@ -76,9 +76,9 @@ const SkillVerifier = () => {
 
         <main className="flex-1 p-4 md:p-8 lg:p-12 py-10 space-y-8">
           <header className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">AI Skill Verifier</h1>
+            <h1 className="text-3xl font-bold text-slate-900">High-Integrity AI Skill Auditor</h1>
             <p className="text-slate-500 text-sm max-w-xl">
-              Utilize our neural verification engine to validate professional competencies against the Solana blockchain.
+              A brutally honest verification engine that cross-references blockchain credentials with certificate file contents for definitive professional auditing.
             </p>
           </header>
 
