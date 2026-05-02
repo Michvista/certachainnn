@@ -54,15 +54,22 @@ const ClaimCredentials = () => {
                 </div>
                 <div className="pt-2">
                   <p className="text-sm text-slate-600 mb-4">An email with your claim link and private key access has been sent to <strong>{email}</strong>.</p>
-                  <a 
-                    href={success.claimLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-                  >
-                    Go to Claim Portal <ExternalLink size={14} />
-                  </a>
-                </div>
+                  <div className="flex flex-col gap-2">
+                    <a 
+                      href={success.claimLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                    >
+                      Go to Claim Portal <ExternalLink size={14} />
+                    </a>
+                    <a 
+                      href={`/profile/${success.custodialWalletAddress}`}
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all"
+                    >
+                      View My Credentials
+                    </a>
+                  </div>
                 <button 
                   onClick={() => setSuccess(null)}
                   className="text-xs text-indigo-600 font-bold hover:underline"
