@@ -459,12 +459,19 @@ app.get('/api/certificates', async (req, res) => {
   }
 });
 
-console.log("Starting server...");
-const server = app.listen(PORT, () => {
-  console.log(`CertaChain API running on port ${PORT}`);
-  console.log("Server is now listening for requests.");
-});
 
-server.on('error', (err) => {
-  console.error("SERVER ERROR:", err);
-});
+// Only start the HTTP server when running locally (not on Vercel serverless)
+if (process.env.VERCEL !== '1') {
+  console.log("Starting server...");
+  const server = app.listen(PORT, () => {
+    console.log(`CertaChain API running on port ${PORT}`);
+    console.log("Server is now listening for requests.");
+  });
+
+  server.on('error', (err) => {
+    console.error("SERVER ERROR:", err);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
