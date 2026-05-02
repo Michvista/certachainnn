@@ -19,7 +19,7 @@ async function main() {
       institutionWallet: "inst_123",
       studentName: "Alex Chen",
       studentWallet: testWallet,
-      course: "Advanced Solana Smart Contracts",
+      course: "Master of Art in Digital Design",
       ipfsUrl: "ipfs://QmDummyHash1"
     },
     {
@@ -27,7 +27,7 @@ async function main() {
       institutionWallet: "inst_456",
       studentName: "Alex Chen",
       studentWallet: testWallet,
-      course: "Web3 Security Fundamentals",
+      course: "Fine Arts & Visual Communication",
       ipfsUrl: "ipfs://QmDummyHash2"
     },
     {
@@ -35,7 +35,7 @@ async function main() {
       institutionWallet: "inst_789",
       studentName: "Alex Chen",
       studentWallet: testWallet,
-      course: "Rust Programming Mastery",
+      course: "History of Contemporary Art",
       ipfsUrl: "ipfs://QmDummyHash3"
     }
   ];
