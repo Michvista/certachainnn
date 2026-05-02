@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { claimWallet } from '../utils/api';
-import { Loader2, Mail, ShieldCheck, ExternalLink, AlertCircle } from 'lucide-react';
+import { claimWallet, getWalletByToken } from '../utils/api';
+import { Loader2, Mail, ShieldCheck, ExternalLink, AlertCircle, Key } from 'lucide-react';
 
 const ClaimCredentials = () => {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
   const [email, setEmail] = useState('');
   const [certId, setCertId] = useState('');
+
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      getWalletByToken(token)
+        .then(res => {
+          setSuccess(res);
+          setEmail(res.email);
+        })
+        .catch(err => setError(err.message))
+        .finally(() => setLoading(false));
+    }
+  }, [token]);
 
   const handleClaim = async (e) => {
     e.preventDefault();
@@ -52,6 +69,15 @@ const ClaimCredentials = () => {
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Your New Wallet Address</p>
                   <p className="text-xs font-mono bg-slate-50 p-3 rounded border border-slate-100 break-all">{success.custodialWalletAddress}</p>
                 </div>
+
+                {success.privateKey && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center justify-center gap-1">
+                      <Key size={10} /> Private Key (Save this securely!)
+                    </p>
+                    <p className="text-[8px] font-mono bg-red-50 p-3 rounded border border-red-100 break-all text-red-800 tracking-tighter leading-tight">{success.privateKey}</p>
+                  </div>
+                )}
                 <div className="pt-2">
                   <p className="text-sm text-slate-600 mb-4">An email with your claim link and private key access has been sent to <strong>{email}</strong>.</p>
                   <div className="flex flex-col gap-2">

@@ -91,6 +91,14 @@ export const claimWallet = async (email, certId) => {
   return response.json();
 };
 
+export const getWalletByToken = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/users/claim/${token}`);
+  if (!response.ok) {
+    throw new Error(await parseError(response, 'Failed to retrieve wallet'));
+  }
+  return response.json();
+};
+
 export const getStats = async () => {
   const response = await fetch(`${API_BASE_URL}/stats`);
   if (!response.ok) {

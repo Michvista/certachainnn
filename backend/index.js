@@ -459,6 +459,28 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
   }
 });
 
+app.get('/api/users/claim/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const wallet = await prisma.custodialWallet.findUnique({
+      where: { claimToken: token }
+    });
+
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Invalid or expired claim token' });
+    }
+
+    res.status(200).json({
+      success: true,
+      custodialWalletAddress: wallet.publicKey,
+      privateKey: wallet.privateKey,
+      email: wallet.email
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/stats', async (req, res) => {
   try {
     const totalCertificates = await prisma.certificate.count();
