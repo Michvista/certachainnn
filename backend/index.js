@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
+const db = require('./db');
 const pinataSDK = require('@pinata/sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Keypair, PublicKey } = require('@solana/web3.js');
@@ -23,7 +23,7 @@ app.use(express.json());
 // Multer setup for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 if (!process.env.PINATA_API_KEY || process.env.PINATA_API_KEY === 'mock_pinata_key') {
   console.error("WARNING: Invalid PINATA_API_KEY provided.");
@@ -399,6 +399,12 @@ app.get('/api/certificates', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+console.log("Starting server...");
+const server = app.listen(PORT, () => {
   console.log(`CertaChain API running on port ${PORT}`);
+  console.log("Server is now listening for requests.");
+});
+
+server.on('error', (err) => {
+  console.error("SERVER ERROR:", err);
 });

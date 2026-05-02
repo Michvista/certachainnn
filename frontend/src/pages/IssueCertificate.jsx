@@ -4,7 +4,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Sidebar from '../features/dashboard/Sidebar';
-import { issueCertificate } from '../utils/api';
+import { issueCertificate, claimWallet } from '../utils/api';
 import { Loader2, CheckCircle, AlertCircle, Upload, FileText, X } from 'lucide-react';
 
 const IssueCertificate = () => {
@@ -70,13 +70,10 @@ const IssueCertificate = () => {
         // If issued via email, trigger the claim process automatically
         if (issueMethod === 'email') {
           try {
-            await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/claim`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: formData.student_email, certId: res.certId })
-            });
+            await claimWallet(formData.student_email, res.certId);
           } catch (claimErr) {
-            console.error("Auto-claim failed:", claimErr);
+            console.error("Auto-claim notification failed:", claimErr);
+            // We don't throw here so the user still sees the success of the minting itself
           }
         }
 
