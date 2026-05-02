@@ -5,11 +5,15 @@ import Footer from '../../components/layout/Footer';
 import Sidebar from '../../features/dashboard/Sidebar';
 import StatCard from '../../features/dashboard/StatCard';
 import ActivityTable from '../../features/dashboard/ActivityTable';
+import { useNavigate } from 'react-router-dom';
 import { getAllCertificates, getStats } from '../../utils/api';
 
 export default function Institution() {
-  const [stats, setStats] = useState({ totalCertificates: '--', totalStudents: '--', avgVerificationTime: null });
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({ totalCertificates: '--', totalStudents: '--' });
   const [chartData, setChartData] = useState([]);
+  const [searchWallet, setSearchWallet] = useState('');
+  const [allCerts, setAllCerts] = useState([]);
 
   useEffect(() => {
     getStats().then(res => {
@@ -17,6 +21,10 @@ export default function Institution() {
     }).catch(() => {});
 
     getAllCertificates(50).then((res) => {
+      if (res.success) {
+        setAllCerts(res.certificates);
+      }
+      
       if (!res.success) {
         return;
       }
@@ -40,6 +48,34 @@ export default function Institution() {
     }).catch(() => {});
   }, []);
 
+  const handleExport = () => {
+    if (allCerts.length === 0) return;
+    const headers = ['Certificate ID', 'Student Name', 'Course', 'Wallet', 'IPFS URL', 'Issue Date'];
+    const csvRows = [
+      headers.join(','),
+      ...allCerts.map(c => [
+        c.certId,
+        `"${c.studentName}"`,
+        `"${c.course}"`,
+        c.studentWallet,
+        c.ipfsUrl,
+        c.issueDate
+      ].join(','))
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `certachain-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
+  const handleSearch = () => {
+    if (searchWallet.trim()) {
+      navigate(`/verifier?wallet=${searchWallet.trim()}`);
+    }
+  };
+
   const maxCount = Math.max(...chartData.map((item) => item.count), 1);
 
   return (
@@ -55,20 +91,19 @@ export default function Institution() {
                   <h1 className="text-2xl font-bold text-slate-800">Dashboard Overview</h1>
                   <p className="text-sm text-gray-500">Manage academic records for your institution on Solana.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 print:hidden">
                   <button className="bg-white border border-gray-200 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-gray-50">
                     <Calendar size={14} /> Last 30 Days
                   </button>
-                  <button className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-gray-800">
-                    <Download size={14} /> Export Ledger
-                  </button>
+                    <button className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-gray-800" onClick={handleExport}>
+                      <Download size={14} /> Export Ledger
+                    </button>
                 </div>
               </header>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StatCard label="Total Certificates Issued" value={stats.totalCertificates} sub="On-chain records" />
                 <StatCard label="Active Students" value={stats.totalStudents} sub="Distinct wallet holders" />
-                <StatCard label="Avg Verification Time" value={stats.avgVerificationTime || 'N/A'} sub="Not tracked by the current API" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -84,8 +119,8 @@ export default function Institution() {
                     {chartData.map((item) => (
                       <div key={item.label} className="flex flex-col items-center flex-1 gap-4">
                         <div
-                          style={{ height: `${(item.count / maxCount) * 100}%` }}
-                          className={`w-full rounded-t-sm transition-all ${item.count === maxCount ? 'bg-[#7030d8]' : 'bg-indigo-100'}`}
+                          style={{ height: `${Math.max((item.count / maxCount) * 100, 5)}%` }}
+                          className={`w-full rounded-t-sm transition-all ${item.count === maxCount && item.count > 0 ? 'bg-[#7030d8]' : 'bg-indigo-100'}`}
                         />
                         <span className="text-[10px] font-bold text-gray-400">{item.label}</span>
                       </div>
@@ -103,10 +138,16 @@ export default function Institution() {
                   </div>
                   <div className="relative">
                     <input
+                      value={searchWallet}
+                      onChange={(e) => setSearchWallet(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                       placeholder="Enter wallet address..."
                       className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-xs focus:outline-none"
                     />
-                    <button className="absolute right-2 top-2 bg-white text-black p-1 rounded">
+                    <button 
+                      onClick={handleSearch}
+                      className="absolute right-2 top-2 bg-white text-black p-1 rounded"
+                    >
                       <ArrowUpRight size={14} />
                     </button>
                   </div>

@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+@layer base {
+  @media print {
+    .print\:hidden {
+      display: none !important;
+    }
+    
+    /* Hide layout elements that shouldn't be printed */
+    nav, aside, footer, header button {
+      display: none !important;
+    }
+
+    /* Reset padding/margin for print */
+    body, main {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    /* Ensure content takes full width */
+    .flex, .grid {
+      display: block !important;
+    }
+
+    /* Fix for overlapping headers */
+    .sticky, .fixed {
+      position: static !important;
+    }
+  }
+}

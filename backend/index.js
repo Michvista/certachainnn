@@ -246,6 +246,7 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate the report based on these credentials. Return ONLY JSON without markdown formatting.`;
 
     const model = genAI.getGenerativeModel({
+      // IMPORTANT: DO NOT CHANGE TO 2.5-flash. gemini-1.5-flash is the stable version.
       model: "gemini-1.5-flash",
       systemInstruction
     });
