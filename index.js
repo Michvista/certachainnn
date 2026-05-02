@@ -11,6 +11,7 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const CLIENT_APP_URL = process.env.CLIENT_APP_URL || 'http://localhost:5173';
 
 app.use(cors());
 app.use(express.json());
@@ -28,6 +29,24 @@ if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'mock_gemini_k
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const PROGRAM_ID = new PublicKey(process.env.SOLANA_PROGRAM_ID || 'DFT8JMHf3qkQw8yWqw3q9T9dTkJRAZVtAz8DZchUxJ2u');
+const PROGRAM_DETAILS = {
+  programId: PROGRAM_ID.toBase58(),
+  owner: process.env.SOLANA_PROGRAM_OWNER || 'BPFLoaderUpgradeab1e11111111111111111111111',
+  programDataAddress: process.env.SOLANA_PROGRAM_DATA_ADDRESS || 'FbhhaELi3itDVjb4n2DUUcYRNd3MhwBBLWQYACPEQ7MK',
+  authority: process.env.SOLANA_PROGRAM_AUTHORITY || '2aSDWMciViMA9vxXA3Cf4xPxKqNRpeDxiH5nqjcxuX1e',
+  lastDeployedSlot: process.env.SOLANA_PROGRAM_LAST_DEPLOYED_SLOT || '459239504',
+  dataLength: process.env.SOLANA_PROGRAM_DATA_LENGTH || '152352',
+  balanceSol: process.env.SOLANA_PROGRAM_BALANCE_SOL || '1.061574',
+  cluster: process.env.SOLANA_CLUSTER || 'devnet'
+};
+
+const toGatewayUrl = (ipfsUrl) => {
+  if (!ipfsUrl?.startsWith('ipfs://')) {
+    return null;
+  }
+
+  return `https://gateway.pinata.cloud/ipfs/${ipfsUrl.replace('ipfs://', '')}`;
+};
 
 // --- Nodemailer Setup ---
 const transporter = nodemailer.createTransport({
@@ -113,7 +132,8 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
       message: "Certificate issued successfully",
       certId,
       ipfsUrl,
-      programId: PROGRAM_ID.toBase58()
+      ipfsGatewayUrl: toGatewayUrl(ipfsUrl),
+      program: PROGRAM_DETAILS
     });
   } catch (error) {
     console.error("Error issuing certificate:", error.message);
@@ -135,13 +155,18 @@ app.get('/api/certificates/verify/:certId', async (req, res) => {
 
     res.status(200).json({
       success: true,
+      certId: certificate.certId,
       metadata: {
         studentName: certificate.studentName,
-        course: certificate.course
+        course: certificate.course,
+        studentWallet: certificate.studentWallet
       },
       institution: certificate.institutionWallet,
       isValid: true,
-      issueDate: certificate.issueDate
+      issueDate: certificate.issueDate,
+      ipfsUrl: certificate.ipfsUrl,
+      ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+      program: PROGRAM_DETAILS
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -153,10 +178,19 @@ app.get('/api/students/:walletAddress/credentials', async (req, res) => {
     const { walletAddress } = req.params;
 
     const credentials = await prisma.certificate.findMany({
-      where: { studentWallet: walletAddress }
+      where: { studentWallet: walletAddress },
+      orderBy: { issueDate: 'desc' }
     });
 
-    res.status(200).json({ success: true, credentials });
+    res.status(200).json({
+      success: true,
+      walletAddress,
+      credentials: credentials.map((certificate) => ({
+        ...certificate,
+        ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+        program: PROGRAM_DETAILS
+      }))
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -204,15 +238,24 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
 app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
   try {
     const { email, certId } = req.body;
+    const certificate = await prisma.certificate.findUnique({
+      where: { certId }
+    });
+
+    if (!certificate) {
+      return res.status(404).json({ success: false, error: 'Certificate not found' });
+    }
 
     const newWallet = Keypair.generate();
     const publicKey = newWallet.publicKey.toBase58();
     const privateKey = Buffer.from(newWallet.secretKey).toString('hex');
     const claimToken = crypto.randomBytes(32).toString('hex');
-    const claimLink = `https://certachain.app/claim?token=${claimToken}`;
+    const claimLink = `${CLIENT_APP_URL.replace(/\/$/, '')}/claim?token=${claimToken}`;
 
-    await prisma.custodialWallet.create({
-      data: { email, publicKey, privateKey, claimToken }
+    await prisma.custodialWallet.upsert({
+      where: { email },
+      update: { publicKey, privateKey, claimToken },
+      create: { email, publicKey, privateKey, claimToken }
     });
 
     await prisma.certificate.update({
@@ -238,7 +281,8 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
       success: true,
       message: "Custodial wallet created, certificate assigned, and email queued.",
       custodialWalletAddress: publicKey,
-      claimLink
+      claimLink,
+      certId
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -260,7 +304,7 @@ app.get('/api/stats', async (req, res) => {
       success: true,
       totalCertificates,
       totalStudents: distinctStudents.length,
-      avgVerificationTime: "2.3h" // Static for now
+      avgVerificationTime: null
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -269,11 +313,19 @@ app.get('/api/stats', async (req, res) => {
 
 app.get('/api/certificates', async (req, res) => {
   try {
+    const take = Number.parseInt(req.query.limit, 10);
     const certificates = await prisma.certificate.findMany({
       orderBy: { issueDate: 'desc' },
-      take: 10
+      take: Number.isFinite(take) && take > 0 ? take : 10
     });
-    res.status(200).json({ success: true, certificates });
+    res.status(200).json({
+      success: true,
+      certificates: certificates.map((certificate) => ({
+        ...certificate,
+        ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+        program: PROGRAM_DETAILS
+      }))
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
