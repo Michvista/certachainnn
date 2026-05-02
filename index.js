@@ -27,16 +27,14 @@ if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'mock_gemini_k
 }
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const PROGRAM_ID = new PublicKey('DFT8JMHf3qkQw8yWqw3q9T9dTkJRAZVtAz8DZchUxJ2u');
+const PROGRAM_ID = new PublicKey(process.env.SOLANA_PROGRAM_ID || 'DFT8JMHf3qkQw8yWqw3q9T9dTkJRAZVtAz8DZchUxJ2u');
 
 // --- Nodemailer Setup ---
-// WARNING: This uses Ethereal Email for testing. You MUST replace host, user, and pass with your real SMTP credentials (e.g., Resend, Gmail, Sendgrid)
 const transporter = nodemailer.createTransport({
-  host: 'smtp.ethereal.email',
-  port: 587,
+  service: 'gmail',
   auth: {
-    user: 'mock_user@ethereal.email', // TODO: REPLACE WITH YOUR REAL DATA
-    pass: 'mock_pass'                 // TODO: REPLACE WITH YOUR REAL DATA
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -78,7 +76,7 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
     const { institutionWallet, studentDetails } = req.body;
     const certId = crypto.randomUUID();
     const issueDate = new Date().toISOString().split('T')[0];
-    
+
     const metadataPayload = {
       name: studentDetails.name || 'Certificate of Completion',
       description: studentDetails.description || `Issued by ${studentDetails.institution}`,
@@ -91,16 +89,14 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
       certificate_id: certId,
       valid: true
     };
-    
+
     const options = {
       pinataMetadata: { name: `Certificate-${studentDetails.student_name}` }
     };
-    
-    // REAL PINATA UPLOAD (Throws error if fails)
+
     const pinataRes = await pinata.pinJSONToIPFS(metadataPayload, options);
     const ipfsUrl = `ipfs://${pinataRes.IpfsHash}`;
-    
-    // REAL DATABASE SAVE (Throws error if fails)
+
     await prisma.certificate.create({
       data: {
         certId,
@@ -128,8 +124,7 @@ app.post('/api/certificates/issue', validateRequest(issueSchema), async (req, re
 app.get('/api/certificates/verify/:certId', async (req, res) => {
   try {
     const { certId } = req.params;
-    
-    // REAL DATABASE QUERY
+
     const certificate = await prisma.certificate.findUnique({
       where: { certId }
     });
@@ -156,8 +151,7 @@ app.get('/api/certificates/verify/:certId', async (req, res) => {
 app.get('/api/students/:walletAddress/credentials', async (req, res) => {
   try {
     const { walletAddress } = req.params;
-    
-    // REAL DATABASE QUERY
+
     const credentials = await prisma.certificate.findMany({
       where: { studentWallet: walletAddress }
     });
@@ -172,16 +166,21 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
   try {
     const { credentials } = req.body;
 
-    const systemInstruction = "You are a professional credential analyst. Given a list of verified blockchain credentials, generate a structured Skill Verification Report.";
-    const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate: 1) Verified Skills Summary 2) Strongest Areas 3) Skill Gaps for optional job description 4) Overall Credential Score out of 100. Return as JSON.`;
-    
-    // REAL AI CALL
-    const model = genAI.getGenerativeModel({ 
+    const systemInstruction = `You are a professional credential analyst. Given a list of verified blockchain credentials, generate a structured Skill Verification Report. You MUST return ONLY a JSON object matching this exact schema:
+{
+  "summary": "A 1-2 sentence overview of the candidate's verified skills",
+  "skillsVerified": ["Skill 1", "Skill 2", "Skill 3"],
+  "recommendations": ["Skill gap 1", "Skill gap 2"],
+  "overallScore": 85
+}`;
+    const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate the report based on these credentials. Return ONLY JSON without markdown formatting.`;
+
+    const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction
     });
     const result = await model.generateContent(userPrompt);
-    
+
     let aiResponseText = result.response.text();
     aiResponseText = aiResponseText.replace(/```json\n|\n```|```/g, '').trim();
 
@@ -189,10 +188,10 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     try {
       skillReport = JSON.parse(aiResponseText);
     } catch (e) {
-      return res.status(500).json({ 
-        success: false, 
-        error: "Failed to parse AI response. Ensure valid JSON.", 
-        rawResponse: aiResponseText 
+      return res.status(500).json({
+        success: false,
+        error: "Failed to parse AI response. Ensure valid JSON.",
+        rawResponse: aiResponseText
       });
     }
 
@@ -205,15 +204,13 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
 app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
   try {
     const { email, certId } = req.body;
-    
-    // REAL SOLANA WALLET GENERATION
+
     const newWallet = Keypair.generate();
     const publicKey = newWallet.publicKey.toBase58();
     const privateKey = Buffer.from(newWallet.secretKey).toString('hex');
     const claimToken = crypto.randomBytes(32).toString('hex');
     const claimLink = `https://certachain.app/claim?token=${claimToken}`;
 
-    // REAL DATABASE SAVE
     await prisma.custodialWallet.create({
       data: { email, publicKey, privateKey, claimToken }
     });
@@ -222,8 +219,7 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
       where: { certId },
       data: { studentWallet: publicKey }
     });
-    
-    // REAL EMAIL SENDING
+
     try {
       await transporter.sendMail({
         from: '"CertaChain" <no-reply@certachain.app>',
@@ -243,6 +239,28 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
       message: "Custodial wallet created, certificate assigned, and email queued.",
       custodialWalletAddress: publicKey,
       claimLink
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const totalCertificates = await prisma.certificate.count();
+    
+    // In a real app, 'totalStudents' might be distinct wallets or users
+    // Here we count distinct student wallets
+    const distinctStudents = await prisma.certificate.findMany({
+      select: { studentWallet: true },
+      distinct: ['studentWallet']
+    });
+    
+    res.status(200).json({
+      success: true,
+      totalCertificates,
+      totalStudents: distinctStudents.length,
+      avgVerificationTime: "2.3h" // Static for now
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
