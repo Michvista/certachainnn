@@ -359,7 +359,7 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     Generate the strictly honest report. Return ONLY JSON.`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       systemInstruction
     });
 
