@@ -1,0 +1,24 @@
+{
+  "name": "certachain",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
+    "@google/generative-ai": "^0.24.1",
+    "@pinata/sdk": "^2.1.0",
+    "@prisma/client": "^5.22.0",
+    "@solana/web3.js": "^1.98.4",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "prisma": "^5.22.0"
+  }
+}
