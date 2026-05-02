@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, 'dev.json');
+// Vercel serverless environment has a read-only filesystem except for /tmp
+const isVercel = process.env.VERCEL === '1';
+const DB_FILE = isVercel 
+  ? path.join('/tmp', 'dev.json') 
+  : path.join(__dirname, 'dev.json');
 
 // Initialize DB if not exists
 if (!fs.existsSync(DB_FILE)) {
@@ -10,6 +14,7 @@ if (!fs.existsSync(DB_FILE)) {
 
 const getData = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 const saveData = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+
 
 const db = {
   certificate: {
