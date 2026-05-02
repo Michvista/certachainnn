@@ -1,4 +1,38 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const getDefaultApiBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'http://localhost:5050/api';
+  }
+
+  const { origin, hostname } = window.location;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  if (isLocalHost) {
+    return 'http://localhost:5050/api';
+  }
+
+  return `${origin}/_/backend/api`;
+};
+
+const getApiBaseUrl = () => {
+  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (!configured) {
+    return getDefaultApiBaseUrl();
+  }
+
+  if (typeof window !== 'undefined') {
+    const isWindowLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isConfiguredLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configured);
+
+    if (!isWindowLocal && isConfiguredLocal) {
+      return getDefaultApiBaseUrl();
+    }
+  }
+
+  return configured.replace(/\/$/, '');
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const parseError = async (response, fallbackMessage) => {
   const errorData = await response.json().catch(() => null);

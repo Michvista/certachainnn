@@ -20,7 +20,7 @@ const ClaimCredentials = () => {
       setLoading(true);
       getWalletByToken(token)
         .then(res => {
-          setSuccess(res);
+          setSuccess({ ...res, isTokenClaim: true });
           setEmail(res.email);
         })
         .catch(err => setError(err.message))
@@ -63,7 +63,7 @@ const ClaimCredentials = () => {
             {success ? (
               <div className="space-y-6 text-center animate-in zoom-in duration-300">
                 <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-sm font-medium">
-                  Success! A custodial wallet has been generated for you.
+                  {success.isTokenClaim ? 'Success! Your certificate wallet has been retrieved.' : 'Success! A custodial wallet has been generated for you.'}
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Your New Wallet Address</p>
@@ -79,16 +79,22 @@ const ClaimCredentials = () => {
                   </div>
                 )}
                 <div className="pt-2">
-                  <p className="text-sm text-slate-600 mb-4">An email with your claim link and private key access has been sent to <strong>{email}</strong>.</p>
+                  <p className="text-sm text-slate-600 mb-4">
+                    {success.isTokenClaim
+                      ? <>This secure link belongs to <strong>{email}</strong>. Save the private key before leaving this page.</>
+                      : <>An email with your claim link and private key access has been sent to <strong>{email}</strong>.</>}
+                  </p>
                   <div className="flex flex-col gap-2">
-                    <a 
-                      href={success.claimLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-                    >
-                      Go to Claim Portal <ExternalLink size={14} />
-                    </a>
+                    {success.claimLink ? (
+                      <a 
+                        href={success.claimLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                      >
+                        Go to Claim Portal <ExternalLink size={14} />
+                      </a>
+                    ) : null}
                     <a 
                       href={`/profile/${success.custodialWalletAddress}`}
                       className="flex items-center justify-center gap-2 w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all"

@@ -56,6 +56,37 @@ const PROGRAM_DETAILS = {
   cluster: process.env.SOLANA_CLUSTER
 };
 
+const getRequestOrigin = (req) => {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = Array.isArray(forwardedHost) ? forwardedHost[0] : (forwardedHost || req.headers.host);
+
+  if (!host) {
+    return null;
+  }
+
+  return `${proto || req.protocol || 'https'}://${host}`;
+};
+
+const getClientAppUrl = (req) => {
+  if (process.env.CLIENT_APP_URL) {
+    return process.env.CLIENT_APP_URL.replace(/\/$/, '');
+  }
+
+  const origin = getRequestOrigin(req);
+  if (!origin) {
+    return CLIENT_APP_URL.replace(/\/$/, '');
+  }
+
+  const host = origin.replace(/^https?:\/\//, '');
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)) {
+    return CLIENT_APP_URL.replace(/\/$/, '');
+  }
+
+  return origin.replace(/\/$/, '');
+};
+
 const toGatewayUrl = (ipfsUrl) => {
   if (!ipfsUrl?.startsWith('ipfs://')) {
     return null;
@@ -83,6 +114,7 @@ const issueSchema = z.object({
     course: z.string().min(1, "Course is required"),
     student_name: z.string().min(1, "Student name is required"),
     student_wallet: z.string().nullable().optional(),
+    student_email: z.string().email("Invalid student email address").optional(),
     grade: z.string().min(1, "Grade is required")
   })
 });
@@ -190,7 +222,7 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
         const publicKey = newWallet.publicKey.toBase58();
         const privateKey = Buffer.from(newWallet.secretKey).toString('hex');
         const claimToken = crypto.randomBytes(32).toString('hex');
-        claimLink = `${CLIENT_APP_URL.replace(/\/$/, '')}/claim?token=${claimToken}`;
+        claimLink = `${getClientAppUrl(req)}/claim?token=${claimToken}`;
 
         await prisma.custodialWallet.upsert({
           where: { email: studentEmail },
@@ -406,7 +438,7 @@ app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
     const publicKey = newWallet.publicKey.toBase58();
     const privateKey = Buffer.from(newWallet.secretKey).toString('hex');
     const claimToken = crypto.randomBytes(32).toString('hex');
-    const claimLink = `${CLIENT_APP_URL.replace(/\/$/, '')}/claim?token=${claimToken}`;
+    const claimLink = `${getClientAppUrl(req)}/claim?token=${claimToken}`;
 
     await prisma.custodialWallet.upsert({
       where: { email },
@@ -459,7 +491,8 @@ app.get('/api/users/claim/:token', async (req, res) => {
       success: true,
       custodialWalletAddress: wallet.publicKey,
       privateKey: wallet.privateKey,
-      email: wallet.email
+      email: wallet.email,
+      claimedViaToken: true
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
