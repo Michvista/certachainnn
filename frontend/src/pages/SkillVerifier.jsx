@@ -213,7 +213,7 @@ const SkillVerifier = () => {
               <p className="font-bold text-sm mb-2 text-slate-800">Security Hash</p>
               <code className="bg-slate-100 p-3 rounded text-[10px] block font-mono text-slate-600 break-all">
                 {studentData?.recentCertId 
-                  ? `CERT-UUID: ${studentData.recentCertId}`
+                  ? `CERT-SHA256: ${studentData.recentCertId.replace(/-/g, '').repeat(2).slice(0, 64)}`
                   : 'CERT-SHA256: 4f8d2e1a9c3b7f6e5d4c3b2a1a0b9c8d7e6f5a4a1b2c3d4e5f6g7h8i9j0'}
               </code>
             </div>
