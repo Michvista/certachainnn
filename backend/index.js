@@ -92,7 +92,7 @@ const validateRequest = (schema) => (req, res, next) => {
     const dataToValidate = req.body.studentDetails && typeof req.body.studentDetails === 'string'
       ? { ...req.body, studentDetails: JSON.parse(req.body.studentDetails) }
       : req.body;
-    
+
     schema.parse(dataToValidate);
     next();
   } catch (error) {
@@ -104,7 +104,7 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
   try {
     const { institutionWallet, studentDetails: studentDetailsStr } = req.body;
     const studentDetails = typeof studentDetailsStr === 'string' ? JSON.parse(studentDetailsStr) : studentDetailsStr;
-    
+
     const certId = crypto.randomUUID();
     const issueDate = new Date().toISOString().split('T')[0];
     let fileUrl = null;
@@ -246,9 +246,11 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. Generate the report based on these credentials. Return ONLY JSON without markdown formatting.`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       systemInstruction
     });
+
+    console.log("Generating AI skill report for credentials count:", credentials.length);
     const result = await model.generateContent(userPrompt);
 
     let aiResponseText = result.response.text();
@@ -258,6 +260,7 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
     try {
       skillReport = JSON.parse(aiResponseText);
     } catch (e) {
+      console.error("AI Response Parsing Error:", aiResponseText);
       return res.status(500).json({
         success: false,
         error: "Failed to parse AI response. Ensure valid JSON.",
@@ -267,7 +270,11 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
 
     res.status(200).json({ success: true, skillReport });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Gemini AI Error:", error.message);
+    if (error.message.includes("429") || error.message.includes("quota")) {
+      return res.status(429).json({ success: false, error: "AI Service Quota Exceeded. Please try again later." });
+    }
+    res.status(500).json({ success: false, error: "AI Generation Failed: " + error.message });
   }
 });
 
@@ -331,7 +338,7 @@ app.get('/api/stats', async (req, res) => {
       select: { studentWallet: true },
       distinct: ['studentWallet']
     });
-    
+
     res.status(200).json({
       success: true,
       totalCertificates,
