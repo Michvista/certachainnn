@@ -144,11 +144,11 @@ export default function Institution() {
                   </div>
                   <div className="flex items-end justify-between h-48 gap-2">
                     {chartData.map((item) => {
-                      const val = activeTab === 'Mints' ? item.mints : item.verifications;
+                      const val = Number(activeTab === 'Mints' ? item.mints : item.verifications) || 0;
                       return (
                         <div key={item.label} className="flex flex-col items-center flex-1 gap-4">
                           <div
-                            style={{ height: `${Math.max((val / maxCount) * 100, 5)}%` }}
+                            style={{ height: `${Math.max((val / (maxCount || 1)) * 100, 5)}%` }}
                             className={`w-full rounded-t-sm transition-all ${val > 0 ? 'bg-[#7030d8]' : 'bg-indigo-100'}`}
                           />
                           <span className="text-[10px] font-bold text-gray-400">{item.label}</span>

@@ -4,7 +4,8 @@ import {
   LayoutDashboard,
   Award,
   BrainCircuit,
-  Plus
+  Plus,
+  Mail
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -14,6 +15,7 @@ const Sidebar = () => {
     { name: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard/overview' },
     { name: 'Issue Credentials', icon: <Award size={18} />, path: '/dashboard/issue' },
     { name: 'AI Skill Verifier', icon: <BrainCircuit size={18} />, path: '/verifier' },
+    { name: 'Claim Wallet', icon: <Mail size={18} />, path: '/claim' },
   ];
 
   return (
