@@ -70,6 +70,7 @@ const ClaimCredentials = () => {
                       View My Credentials
                     </a>
                   </div>
+                </div>
                 <button 
                   onClick={() => setSuccess(null)}
                   className="text-xs text-indigo-600 font-bold hover:underline"
