@@ -1,8 +1,53 @@
 const { PrismaClient } = require('@prisma/client');
 
 const globalForPrisma = globalThis;
+const trimQuotes = (value) => value?.trim().replace(/^['"]|['"]$/g, '');
 
-const prisma = globalForPrisma.__certachainPrisma || new PrismaClient();
+const buildDatabaseUrlFromParts = () => {
+  const host = trimQuotes(process.env.POSTGRES_HOST || process.env.DB_HOST);
+  const port = trimQuotes(process.env.POSTGRES_PORT || process.env.DB_PORT);
+  const user = trimQuotes(process.env.POSTGRES_USER || process.env.DB_USER);
+  const password = trimQuotes(process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD);
+  const database = trimQuotes(process.env.POSTGRES_DATABASE || process.env.POSTGRES_DB || process.env.DB_NAME);
+
+  if (!host || !user || !database) {
+    return null;
+  }
+
+  const auth = password ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}` : encodeURIComponent(user);
+  const portSegment = port ? `:${port}` : '';
+  return `postgresql://${auth}@${host}${portSegment}/${database}`;
+};
+
+const normalizeDatabaseUrl = () => {
+  const raw = trimQuotes(process.env.DATABASE_URL);
+  const fallback = buildDatabaseUrlFromParts();
+  const candidate = raw || fallback;
+
+  if (!candidate) {
+    return null;
+  }
+
+  if (/^postgres(ql)?:\/\//i.test(candidate)) {
+    return candidate;
+  }
+
+  if (candidate.includes('@') && candidate.includes('/')) {
+    return `postgresql://${candidate.replace(/^\/+/, '')}`;
+  }
+
+  return `postgresql://${candidate}`;
+};
+
+const databaseUrl = normalizeDatabaseUrl();
+
+if (databaseUrl) {
+  process.env.DATABASE_URL = databaseUrl;
+}
+
+const prisma =
+  globalForPrisma.__certachainPrisma ||
+  new PrismaClient(databaseUrl ? { datasourceUrl: databaseUrl } : undefined);
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.__certachainPrisma = prisma;
