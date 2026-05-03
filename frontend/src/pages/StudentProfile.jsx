@@ -8,26 +8,35 @@ import ProfileHeader from '../components/profile/ProfileHeader';
 import CredentialCard from '../components/profile/CredentialCard';
 import VerificationSidebar from '../components/profile/VerificationSidebar';
 import { getStudentCredentials } from '../utils/api';
+import { usePortal } from '../context/PortalContext';
 
 const StudentProfile = () => {
   const { publicKey } = useWallet();
   const { id } = useParams();
+  const { getProfile, setActiveRole } = usePortal();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const studentProfile = getProfile('student');
 
-  const walletAddress = publicKey?.toBase58() || (id && id !== 'me' ? id : null);
+  useEffect(() => {
+    setActiveRole('student');
+  }, [setActiveRole]);
+
+  const walletAddress = publicKey?.toBase58() || (id && id !== 'me' ? id : null) || studentProfile.walletAddress || null;
   const profile = credentials[0]
     ? {
-        name: credentials[0].studentName || 'Verified Student',
-        summary: `This profile is generated from ${credentials.length} credential record${credentials.length === 1 ? '' : 's'} retrieved from the CertaChain API.`,
-        primaryCourse: credentials[0].course || 'Credential holder',
+        name: credentials[0].studentName || studentProfile.fullName || 'Verified Student',
+        summary: `This profile consolidates ${credentials.length} verified credential record${credentials.length === 1 ? '' : 's'} retrieved from CertaChain's trust layer.`,
+        primaryCourse: credentials[0].course || studentProfile.courseTrack || 'Credential holder',
         walletAddress
       }
     : {
-        name: 'Verified Student',
-        summary: 'No credential metadata has been loaded for this wallet yet.',
-        primaryCourse: 'Awaiting credential data',
+        name: studentProfile.fullName || 'Verified Student',
+        summary: studentProfile.school
+          ? `${studentProfile.fullName || 'This student'} is registered under ${studentProfile.school}. Connect a wallet or use the email-issued flow to load verified credentials.`
+          : 'No credential metadata has been loaded yet. Students issued certificates by email can use the email viewer without connecting a wallet.',
+        primaryCourse: studentProfile.courseTrack || 'Awaiting credential data',
         walletAddress
       };
   const shareUrl = walletAddress ? `${window.location.origin}/profile/${walletAddress}` : window.location.href;
@@ -43,7 +52,7 @@ const StudentProfile = () => {
           setCredentials(res.credentials.map(c => ({
             certId: c.certId,
             title: c.course,
-            issuer: c.institutionWallet,
+            issuer: c.institutionName || c.institutionWallet,
             date: new Date(c.issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(),
             type: 'CERTIFICATION',
             icon: 'shield',
@@ -63,9 +72,14 @@ const StudentProfile = () => {
       <div className="min-h-screen bg-[#f8f9ff] flex flex-col">
         <Navbar />
         <main className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-          <h2 className="text-2xl font-bold text-slate-800">Connect Your Wallet</h2>
-          <p className="text-slate-500 max-w-sm">Connect your Solana wallet to view your on-chain credentials and verified professional history.</p>
+          <h2 className="text-2xl font-bold text-slate-800">Open Your Credential Wallet</h2>
+          <p className="text-slate-500 max-w-md">
+            Connect a Solana wallet to load your on-chain records, or use the email-issued certificate flow if your institution delivered credentials without a wallet.
+          </p>
           <WalletMultiButton style={{ background: '#4f46e5', borderRadius: '8px' }} />
+          <a href="/dashboard/email-viewer" className="text-sm font-semibold text-indigo-600 hover:underline">
+            View certificates by email instead
+          </a>
         </main>
         <Footer />
       </div>
@@ -100,7 +114,7 @@ const StudentProfile = () => {
                 </div>
               ) : (
                 <div className="p-6 border border-dashed border-slate-300 rounded-lg text-center text-slate-500">
-                  No credentials found for this wallet.
+                  No credentials found for this wallet yet.
                 </div>
               )}
             </section>

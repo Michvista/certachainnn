@@ -14,7 +14,7 @@ export default function ActivityTable() {
           setActivities(res.certificates.map(c => ({
             id: c.id,
             student: c.studentName,
-            action: "Certificate Minted",
+            action: "Certificate Issued",
             date: new Date(c.issueDate).toLocaleDateString(),
             status: "Complete"
           })));

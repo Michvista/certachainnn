@@ -113,11 +113,11 @@ export const getEmailIssuedCredentials = async (email, certId) => {
   return response.json();
 };
 
-export const generateSkillReport = async (credentials) => {
+export const generateSkillReport = async (credentials, jobDescription) => {
   const response = await fetch(`${API_BASE_URL}/ai/skill-report`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ credentials })
+    body: JSON.stringify({ credentials, jobDescription })
   });
   if (!response.ok) {
     throw new Error(await parseError(response, 'Failed to generate skill report'));

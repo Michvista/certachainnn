@@ -95,6 +95,85 @@ const toGatewayUrl = (ipfsUrl) => {
   return `https://gateway.pinata.cloud/ipfs/${ipfsUrl.replace('ipfs://', '')}`;
 };
 
+const trimText = (value, maxLength = 1800) => {
+  if (!value) {
+    return '';
+  }
+
+  return value.replace(/\s+/g, ' ').trim().slice(0, maxLength);
+};
+
+const detectBufferMimeType = (buffer, headerValue) => {
+  const normalizedHeader = (Array.isArray(headerValue) ? headerValue[0] : headerValue || '').split(';')[0].trim().toLowerCase();
+  if (normalizedHeader && normalizedHeader !== 'application/octet-stream') {
+    return normalizedHeader;
+  }
+
+  if (!buffer || buffer.length < 12) {
+    return 'application/octet-stream';
+  }
+
+  if (buffer.slice(0, 5).toString() === '%PDF-') {
+    return 'application/pdf';
+  }
+
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return 'image/png';
+  }
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (buffer.slice(0, 4).toString() === 'RIFF' && buffer.slice(8, 12).toString() === 'WEBP') {
+    return 'image/webp';
+  }
+
+  return 'application/octet-stream';
+};
+
+const fetchCertificateMetadata = async (certificate) => {
+  const gatewayUrl = toGatewayUrl(certificate.ipfsUrl);
+  if (!gatewayUrl) {
+    return null;
+  }
+
+  try {
+    const response = await axios.get(gatewayUrl, { timeout: 12000 });
+    if (response?.data && typeof response.data === 'object') {
+      return response.data;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Failed to hydrate metadata for ${certificate.certId}:`, error.message);
+    return null;
+  }
+};
+
+const hydrateCertificate = async (certificate) => {
+  const metadata = await fetchCertificateMetadata(certificate);
+  const enrichedFileUrl = certificate.fileUrl || metadata?.file_url || null;
+
+  return {
+    ...certificate,
+    studentName: certificate.studentName || metadata?.student_name || null,
+    course: certificate.course || metadata?.course || null,
+    institutionName: metadata?.institution || null,
+    description: metadata?.description || null,
+    grade: metadata?.grade || null,
+    issueDate: certificate.issueDate || metadata?.issue_date || null,
+    fileUrl: enrichedFileUrl,
+    fileGatewayUrl: toGatewayUrl(enrichedFileUrl),
+    ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+    metadata,
+    program: PROGRAM_DETAILS
+  };
+};
+
+const hydrateCertificates = async (certificates = []) => (
+  Promise.all(certificates.map((certificate) => hydrateCertificate(certificate)))
+);
+
 // --- Nodemailer Setup ---
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -120,7 +199,8 @@ const issueSchema = z.object({
 });
 
 const skillReportSchema = z.object({
-  credentials: z.array(z.any()).min(1, "Credentials array cannot be empty")
+  credentials: z.array(z.any()).min(1, "Credentials array cannot be empty"),
+  jobDescription: z.string().max(4000).optional()
 });
 
 const claimSchema = z.object({
@@ -160,21 +240,16 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
     // 1. Upload File to IPFS if present
     // 1. Upload File to IPFS if present
     if (req.file) {
-      try {
-        const readableStreamForFile = new stream.Readable();
-        readableStreamForFile.push(req.file.buffer);
-        readableStreamForFile.push(null);
+      const readableStreamForFile = new stream.Readable();
+      readableStreamForFile.push(req.file.buffer);
+      readableStreamForFile.push(null);
 
-        const fileOptions = {
-          pinataMetadata: { name: `CertFile-${certId}` }
-        };
+      const fileOptions = {
+        pinataMetadata: { name: `CertFile-${certId}` }
+      };
 
-        const filePinRes = await pinata.pinFileToIPFS(readableStreamForFile, fileOptions);
-        fileUrl = `ipfs://${filePinRes.IpfsHash}`;
-      } catch (pinataErr) {
-        console.error("Pinata file upload failed (Network issue?), using fallback:", pinataErr.message);
-        fileUrl = `ipfs://mock-file-hash-${certId}`;
-      }
+      const filePinRes = await pinata.pinFileToIPFS(readableStreamForFile, fileOptions);
+      fileUrl = `ipfs://${filePinRes.IpfsHash}`;
     }
 
     // 2. Upload Metadata to IPFS
@@ -189,21 +264,20 @@ app.post('/api/certificates/issue', upload.single('file'), validateRequest(issue
       issue_date: issueDate,
       certificate_id: certId,
       file_url: fileUrl,
+      file_type: req.file?.mimetype || null,
       valid: true
     };
+    metadataPayload.issuer_wallet = institutionWallet;
+    metadataPayload.network = process.env.SOLANA_CLUSTER || 'devnet';
+    metadataPayload.program_id = PROGRAM_DETAILS.programId;
+    metadataPayload.external_url = `${getClientAppUrl(req)}/verifier?certificate=${certId}`;
 
     const options = {
       pinataMetadata: { name: `CertMeta-${certId}` }
     };
 
-    let ipfsUrl;
-    try {
-      const pinataRes = await pinata.pinJSONToIPFS(metadataPayload, options);
-      ipfsUrl = `ipfs://${pinataRes.IpfsHash}`;
-    } catch (pinataErr) {
-      console.error("Pinata metadata upload failed (Network issue?), using fallback:", pinataErr.message);
-      ipfsUrl = `ipfs://mock-meta-hash-${certId}`;
-    }
+    const pinataRes = await pinata.pinJSONToIPFS(metadataPayload, options);
+    const ipfsUrl = `ipfs://${pinataRes.IpfsHash}`;
 
     // 3. Save to DB
     await prisma.certificate.create({
@@ -293,21 +367,25 @@ app.get('/api/certificates/verify/:certId', async (req, res) => {
       return res.status(404).json({ success: false, error: "Certificate not found on chain/database" });
     }
 
+    const hydratedCertificate = await hydrateCertificate(certificate);
+
     res.status(200).json({
       success: true,
-      certId: certificate.certId,
+      certId: hydratedCertificate.certId,
       metadata: {
-        studentName: certificate.studentName,
-        course: certificate.course,
-        studentWallet: certificate.studentWallet
+        studentName: hydratedCertificate.studentName,
+        course: hydratedCertificate.course,
+        studentWallet: hydratedCertificate.studentWallet,
+        grade: hydratedCertificate.grade
       },
-      institution: certificate.institutionWallet,
+      institution: hydratedCertificate.institutionWallet,
+      institutionName: hydratedCertificate.institutionName,
       isValid: true,
-      issueDate: certificate.issueDate,
-      ipfsUrl: certificate.ipfsUrl,
-      ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
-      fileUrl: certificate.fileUrl,
-      fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
+      issueDate: hydratedCertificate.issueDate,
+      ipfsUrl: hydratedCertificate.ipfsUrl,
+      ipfsGatewayUrl: hydratedCertificate.ipfsGatewayUrl,
+      fileUrl: hydratedCertificate.fileUrl,
+      fileGatewayUrl: hydratedCertificate.fileGatewayUrl,
       program: PROGRAM_DETAILS
     });
   } catch (error) {
@@ -319,21 +397,17 @@ app.get('/api/students/:walletAddress/credentials', async (req, res) => {
   try {
     const { walletAddress } = req.params;
 
-    let credentials = await prisma.certificate.findMany({
+    const credentials = await prisma.certificate.findMany({
       where: { studentWallet: walletAddress },
       orderBy: { issueDate: 'desc' }
     });
 
+    const hydratedCredentials = await hydrateCertificates(credentials);
 
     res.status(200).json({
       success: true,
       walletAddress,
-      credentials: credentials.map((certificate) => ({
-        ...certificate,
-        ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
-        fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
-        program: PROGRAM_DETAILS
-      }))
+      credentials: hydratedCredentials
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -368,17 +442,13 @@ app.post('/api/students/email-credentials', validateRequest(emailCredentialLooku
       where: { studentWallet: wallet.publicKey },
       orderBy: { issueDate: 'desc' }
     });
+    const hydratedCredentials = await hydrateCertificates(credentials);
 
     res.status(200).json({
       success: true,
       email,
       walletAddress: wallet.publicKey,
-      credentials: credentials.map((item) => ({
-        ...item,
-        ipfsGatewayUrl: toGatewayUrl(item.ipfsUrl),
-        fileGatewayUrl: toGatewayUrl(item.fileUrl),
-        program: PROGRAM_DETAILS
-      }))
+      credentials: hydratedCredentials
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -387,51 +457,89 @@ app.post('/api/students/email-credentials', validateRequest(emailCredentialLooku
 
 app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req, res) => {
   try {
-    const { credentials } = req.body;
+    const { credentials, jobDescription } = req.body;
 
-    const systemInstruction = `You are a brutally honest and highly critical professional credential analyst. Your job is to verify professional competencies based on blockchain records AND uploaded certificate content. 
-    BE CRITICAL: If a student has few credentials, highlight the gaps aggressively. If grades are average, do not sugarcoat. 
-    IMPORTANT: You MUST explicitly mention in your summary if you scanned and analyzed an uploaded file (e.g. "File analysis confirmed..." or "No uploaded files detected."). 
-    You MUST return ONLY a JSON object matching this exact schema:
+    const systemInstruction = `You are CertaChain's credential intelligence engine. Analyze only evidence that appears in verified credential records and uploaded certificate files.
+    You must explicitly state whether uploaded files were analyzed, and if so whether they were PDFs, images, or both.
+    Keep the tone professional and hiring-oriented.
+    Return ONLY valid JSON in this exact shape:
 {
-  "summary": "A brutally honest 1-2 sentence overview. Must explicitly state if uploaded file contents were analyzed.",
+  "summary": "1-2 sentence overview that mentions file analysis coverage.",
   "skillsVerified": ["Skill 1", "Skill 2"],
-  "recommendations": ["Aggressive skill gap 1", "Aggressive skill gap 2"],
-  "overallScore": 0-100 (Be strict)
+  "strongestAreas": ["Area 1", "Area 2"],
+  "skillGaps": ["Gap 1", "Gap 2"],
+  "overallScore": 0,
+  "recommendation": "Plain-English hiring recommendation."
 }`;
 
-    // 1. Attempt to extract content from files if they exist
-    let fileContents = "";
-    for (const cert of credentials) {
-      if (cert.fileUrl) {
-        try {
-          const gatewayUrl = cert.fileUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
-          const response = await axios.get(gatewayUrl, { responseType: 'arraybuffer' });
-          const buffer = Buffer.from(response.data);
+    const multimodalParts = [];
+    const fileEvidence = [];
+    let pdfCount = 0;
+    let imageCount = 0;
 
-          if (cert.fileUrl.toLowerCase().endsWith('.pdf')) {
-            const data = await pdf(buffer);
-            fileContents += `\n[File Content for ${cert.course}]: ${data.text.slice(0, 1500)}`;
-          } else {
-            fileContents += `\n[Image File detected for ${cert.course} - Verified visually]`;
-          }
-        } catch (e) {
-          console.error("Failed to fetch/parse file:", e.message);
+    for (const cert of credentials) {
+      const gatewayUrl = cert.fileGatewayUrl || toGatewayUrl(cert.fileUrl);
+      if (!gatewayUrl) {
+        continue;
+      }
+
+      try {
+        const response = await axios.get(gatewayUrl, { responseType: 'arraybuffer', timeout: 15000 });
+        const buffer = Buffer.from(response.data);
+        const mimeType = detectBufferMimeType(buffer, response.headers['content-type']);
+        const courseLabel = cert.course || cert.title || cert.certId;
+
+        if (mimeType === 'application/pdf') {
+          const data = await pdf(buffer);
+          pdfCount += 1;
+          fileEvidence.push(`[${courseLabel}] PDF text extracted: ${trimText(data.text, 1800)}`);
+          continue;
         }
+
+        if (mimeType.startsWith('image/')) {
+          imageCount += 1;
+          fileEvidence.push(`[${courseLabel}] Certificate image attached for visual analysis.`);
+          multimodalParts.push({
+            inlineData: {
+              mimeType,
+              data: buffer.toString('base64')
+            }
+          });
+          continue;
+        }
+
+        fileEvidence.push(`[${courseLabel}] Uploaded file detected but MIME type ${mimeType} is unsupported for deep analysis.`);
+      } catch (e) {
+        console.error("Failed to fetch/parse file:", e.message);
+        fileEvidence.push(`[${cert.course || cert.certId}] Uploaded file could not be fetched for analysis.`);
       }
     }
 
-    const userPrompt = `Student credentials: ${JSON.stringify(credentials)}. 
-    Additional Raw File Content extracted from certificates: ${fileContents}.
-    Generate the strictly honest report. Return ONLY JSON.`;
+    const userPrompt = `
+Student credentials:
+${JSON.stringify(credentials, null, 2)}
+
+Job description:
+${jobDescription ? jobDescription : 'No job description provided.'}
+
+File analysis summary:
+${fileEvidence.length ? fileEvidence.join('\n') : 'No uploaded files were available for analysis.'}
+
+Coverage counts:
+- PDFs analyzed: ${pdfCount}
+- Images analyzed: ${imageCount}
+`;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction
     });
 
-    console.log("Generating Brutally Honest AI skill report for credentials count:", credentials.length);
-    const result = await model.generateContent(userPrompt);
+    console.log("Generating AI skill report for credentials count:", credentials.length);
+    const result = await model.generateContent([
+      { text: userPrompt },
+      ...multimodalParts
+    ]);
 
     let aiResponseText = result.response.text();
     aiResponseText = aiResponseText.replace(/```json\n|\n```|```/g, '').trim();
@@ -461,26 +569,11 @@ app.post('/api/ai/skill-report', validateRequest(skillReportSchema), async (req,
 app.post('/api/users/claim', validateRequest(claimSchema), async (req, res) => {
   try {
     const { email, certId } = req.body;
-    let certificate = await prisma.certificate.findUnique({
+    const certificate = await prisma.certificate.findUnique({
       where: { certId }
     });
 
-    // HACKATHON FIX: Vercel serverless wipes /tmp between cold starts.
-    // If a student tries to claim a cert but the DB is empty, mock it so the demo doesn't fail!
-    if (!certificate && process.env.VERCEL === '1') {
-      console.log(`[Vercel Hack] Mocking missing certificate ${certId} for claim flow.`);
-      certificate = await prisma.certificate.create({
-        data: {
-          certId,
-          institutionWallet: 'mock_inst_wallet',
-          studentName: 'Student',
-          course: 'Verified Course',
-          studentWallet: null,
-          ipfsUrl: 'ipfs://mock',
-          fileUrl: null
-        }
-      });
-    } else if (!certificate) {
+    if (!certificate) {
       return res.status(404).json({ success: false, error: 'Certificate not found' });
     }
 
@@ -575,14 +668,10 @@ app.get('/api/certificates', async (req, res) => {
       orderBy: { issueDate: 'desc' },
       take: Number.isFinite(take) && take > 0 ? take : 10
     });
+    const hydratedCertificates = await hydrateCertificates(certificates);
     res.status(200).json({
       success: true,
-      certificates: certificates.map((certificate) => ({
-        ...certificate,
-        ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
-        fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
-        program: PROGRAM_DETAILS
-      }))
+      certificates: hydratedCertificates
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

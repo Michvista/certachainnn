@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Sidebar from '../features/dashboard/Sidebar';
-import { issueCertificate, claimWallet } from '../utils/api';
+import { issueCertificate } from '../utils/api';
 import { Loader2, CheckCircle, AlertCircle, Upload, FileText, X } from 'lucide-react';
+import { usePortal } from '../context/PortalContext';
 
 const IssueCertificate = () => {
   const { publicKey } = useWallet();
+  const { getProfile, setActiveRole } = usePortal();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const institutionProfile = getProfile('institution');
 
   const [issueMethod, setIssueMethod] = useState('wallet'); // 'wallet' or 'email'
   const [formData, setFormData] = useState({
@@ -21,8 +24,25 @@ const IssueCertificate = () => {
     student_email: '',
     course: '',
     grade: 'A',
-    institution: 'CertaChain Academy'
+    institution: institutionProfile.institutionName || 'CertaChain Academy'
   });
+
+  useEffect(() => {
+    setActiveRole('institution');
+  }, [setActiveRole]);
+
+  useEffect(() => {
+    if (!institutionProfile.institutionName) {
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      institution: !current.institution || current.institution === 'CertaChain Academy'
+        ? institutionProfile.institutionName
+        : current.institution
+    }));
+  }, [institutionProfile.institutionName]);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -80,7 +100,7 @@ const IssueCertificate = () => {
           student_email: '',
           course: '',
           grade: 'A',
-          institution: 'CertaChain Academy'
+          institution: institutionProfile.institutionName || 'CertaChain Academy'
         });
         setSelectedFile(null);
       }
@@ -101,7 +121,7 @@ const IssueCertificate = () => {
             <div className="max-w-2xl mx-auto space-y-8">
               <header>
                 <h1 className="text-3xl font-bold text-slate-900">Issue New Certificate</h1>
-                <p className="text-slate-500 text-sm mt-2">Mint a tamper-proof academic record directly onto the Solana blockchain.</p>
+                <p className="text-slate-500 text-sm mt-2">Anchor a tamper-proof academic record to Solana, store the file on IPFS, and deliver it by wallet or email.</p>
               </header>
 
               {!publicKey ? (
@@ -119,7 +139,7 @@ const IssueCertificate = () => {
                       <div>
                         <p className="text-emerald-800 font-bold text-sm">Certificate Issued Successfully!</p>
                         {success.emailSentTo && <p className="text-emerald-600 text-xs mt-1">Claim email sent to <strong>{success.emailSentTo}</strong>.</p>}
-                        <p className="text-emerald-600 text-xs mt-1">Transaction recorded on Solana Devnet.</p>
+                        <p className="text-emerald-600 text-xs mt-1">Credential metadata has been anchored and is now available for verification.</p>
                         {success.fileGatewayUrl && (
                           <a 
                             href={success.fileGatewayUrl} 
@@ -243,9 +263,9 @@ const IssueCertificate = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Grade</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Grade</label>
                       <select
                         className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                         value={formData.grade}
@@ -275,7 +295,7 @@ const IssueCertificate = () => {
                     disabled={loading}
                     className="w-full bg-black text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    {loading ? <Loader2 className="animate-spin" size={18} /> : 'Mint On-Chain Certificate'}
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : 'Issue Verified Certificate'}
                   </button>
                 </form>
               )}
