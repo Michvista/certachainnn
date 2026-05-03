@@ -55,7 +55,7 @@ const Sidebar = () => {
       cta: { label: 'Verify Talent', path: '/verifier' },
       menuItems: [
         { name: 'Verification Desk', icon: <BrainCircuit size={18} />, path: '/verifier' },
-        { name: 'Student Wallets', icon: <GraduationCap size={18} />, path: '/profile/me' },
+        // { name: 'Student Wallets', icon: <GraduationCap size={18} />, path: '/profile/me' },
         { name: 'Email Credentials', icon: <SearchCheck size={18} />, path: '/dashboard/email-viewer' }
       ]
     }

@@ -29,7 +29,7 @@ export default function Navbar() {
           >
             Portals
           </NavLink>
-          <NavLink
+          {/* <NavLink
             to="/profile/me"
             className={({ isActive }) =>
               `font-medium ${isActive ? 'text-emerald-700' : 'text-slate-700 hover:text-slate-950'}`
@@ -44,7 +44,7 @@ export default function Navbar() {
             }
           >
             Employer Verifier
-          </NavLink>
+          </NavLink> */}
         </div>
 
         <div className="flex items-center gap-3">
