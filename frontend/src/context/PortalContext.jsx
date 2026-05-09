@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'certachain_portal_state_v1';
 
@@ -74,32 +74,59 @@ export function PortalProvider({ children }) {
     }
   }, [state]);
 
-  const value = useMemo(() => ({
-    state,
-    activeRole: state.activeRole,
-    profiles: state.profiles,
-    setActiveRole: (role) => {
-      setState((current) => ({ ...current, activeRole: role }));
-    },
-    updateProfile: (role, updates) => {
-      setState((current) => ({
+  const setActiveRole = useCallback((role) => {
+    setState((current) => (
+      current.activeRole === role
+        ? current
+        : { ...current, activeRole: role }
+    ));
+  }, []);
+
+  const updateProfile = useCallback((role, updates) => {
+    setState((current) => {
+      const nextProfile = {
+        ...current.profiles[role],
+        ...updates
+      };
+      const currentProfile = current.profiles[role];
+      const profileChanged = Object.keys(nextProfile).some((key) => nextProfile[key] !== currentProfile[key]);
+      const roleChanged = current.activeRole !== role;
+
+      if (!profileChanged && !roleChanged) {
+        return current;
+      }
+
+      return {
         ...current,
         activeRole: role,
         profiles: {
           ...current.profiles,
-          [role]: {
-            ...current.profiles[role],
-            ...updates
-          }
+          [role]: nextProfile
         }
-      }));
-    },
-    getProfile: (role) => state.profiles[role] || defaultState.profiles[role],
-    isComplete: (role) => requiredFields[role].every((field) => {
+      };
+    });
+  }, []);
+
+  const getProfile = useCallback((role) => (
+    state.profiles[role] || defaultState.profiles[role]
+  ), [state.profiles]);
+
+  const isComplete = useCallback((role) => (
+    requiredFields[role].every((field) => {
       const valueForField = state.profiles[role]?.[field];
       return typeof valueForField === 'string' ? valueForField.trim().length > 0 : Boolean(valueForField);
     })
-  }), [state]);
+  ), [state.profiles]);
+
+  const value = useMemo(() => ({
+    state,
+    activeRole: state.activeRole,
+    profiles: state.profiles,
+    setActiveRole,
+    updateProfile,
+    getProfile,
+    isComplete
+  }), [state, setActiveRole, updateProfile, getProfile, isComplete]);
 
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
 }
