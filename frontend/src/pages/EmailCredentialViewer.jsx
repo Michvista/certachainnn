@@ -10,7 +10,7 @@ import { AlertCircle, Loader2, Mail, Search } from 'lucide-react';
 import { usePortal } from '../context/PortalContext';
 
 const EmailCredentialViewer = () => {
-  const { setActiveRole } = usePortal();
+  const { setActiveRole, updateProfile } = usePortal();
   const [email, setEmail] = useState('');
   const [certId, setCertId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,14 @@ const EmailCredentialViewer = () => {
 
     try {
       const response = await getEmailIssuedCredentials(email, certId);
+      const firstCredential = response.credentials?.[0];
+      updateProfile('student', {
+        fullName: firstCredential?.studentName || '',
+        email,
+        school: firstCredential?.institutionName || firstCredential?.institutionWallet || '',
+        courseTrack: firstCredential?.course || '',
+        walletAddress: response.walletAddress || ''
+      });
       setResult(response);
     } catch (err) {
       setError(err.message);
@@ -40,7 +48,7 @@ const EmailCredentialViewer = () => {
   const credentials = result?.credentials?.map((credential) => ({
     certId: credential.certId,
     title: credential.course,
-    issuer: credential.institutionWallet,
+    issuer: credential.institutionName || credential.institutionWallet,
     date: new Date(credential.issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(),
     type: 'CERTIFICATION',
     icon: 'shield',

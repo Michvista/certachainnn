@@ -14,7 +14,7 @@ import { usePortal } from '../context/PortalContext';
 const StudentProfile = () => {
   const { publicKey } = useWallet();
   const { id } = useParams();
-  const { getProfile, setActiveRole } = usePortal();
+  const { getProfile, updateProfile, setActiveRole } = usePortal();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,6 +51,16 @@ const StudentProfile = () => {
     getStudentCredentials(walletAddress)
       .then(res => {
         if (res.success) {
+          const firstCredential = res.credentials[0];
+          if (firstCredential) {
+            updateProfile('student', {
+              fullName: firstCredential.studentName || studentProfile.fullName,
+              courseTrack: firstCredential.course || studentProfile.courseTrack,
+              school: firstCredential.institutionName || studentProfile.school,
+              walletAddress
+            });
+          }
+
           setCredentials(res.credentials.map(c => ({
             certId: c.certId,
             title: c.course,
@@ -67,7 +77,7 @@ const StudentProfile = () => {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [walletAddress]);
+  }, [studentProfile.courseTrack, studentProfile.fullName, studentProfile.school, updateProfile, walletAddress]);
 
   if (!walletAddress) {
     return (
