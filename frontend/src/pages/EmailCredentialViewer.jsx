@@ -7,13 +7,19 @@ import CredentialCard from '../components/profile/CredentialCard';
 import VerificationSidebar from '../components/profile/VerificationSidebar';
 import { getEmailIssuedCredentials } from '../utils/api';
 import { AlertCircle, Loader2, Mail, Search } from 'lucide-react';
+import { usePortal } from '../context/PortalContext';
 
 const EmailCredentialViewer = () => {
+  const { setActiveRole } = usePortal();
   const [email, setEmail] = useState('');
   const [certId, setCertId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+
+  React.useEffect(() => {
+    setActiveRole('student');
+  }, [setActiveRole]);
 
   const handleLookup = async (event) => {
     event.preventDefault();

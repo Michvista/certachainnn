@@ -30,10 +30,7 @@ const Sidebar = () => {
       menuItems: [
         { name: 'Overview', icon: <LayoutDashboard size={18} />, path: '/dashboard/overview' },
         { name: 'Institution View', icon: <Award size={18} />, path: '/dashboard/institution' },
-        { name: 'Issue Credentials', icon: <Plus size={18} />, path: '/dashboard/issue' },
-        { name: 'Employer Verifier', icon: <BrainCircuit size={18} />, path: '/verifier' },
-        { name: 'Claim Wallet', icon: <Mail size={18} />, path: '/claim' },
-        { name: 'View By Email', icon: <SearchCheck size={18} />, path: '/dashboard/email-viewer' }
+        { name: 'Issue Credentials', icon: <Plus size={18} />, path: '/dashboard/issue' }
       ]
     },
     student: {
@@ -54,9 +51,7 @@ const Sidebar = () => {
       icon: <BriefcaseBusiness size={18} />,
       cta: { label: 'Verify Talent', path: '/verifier' },
       menuItems: [
-        { name: 'Verification Desk', icon: <BrainCircuit size={18} />, path: '/verifier' },
-        // { name: 'Student Wallets', icon: <GraduationCap size={18} />, path: '/profile/me' },
-        { name: 'Email Credentials', icon: <SearchCheck size={18} />, path: '/dashboard/email-viewer' }
+        { name: 'Verification Desk', icon: <BrainCircuit size={18} />, path: '/verifier' }
       ]
     }
   };
