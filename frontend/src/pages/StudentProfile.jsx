@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import Sidebar from '../features/dashboard/Sidebar';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import CredentialCard from '../components/profile/CredentialCard';
 import VerificationSidebar from '../components/profile/VerificationSidebar';
@@ -71,15 +72,20 @@ const StudentProfile = () => {
     return (
       <div className="min-h-screen bg-[#f8f9ff] flex flex-col">
         <Navbar />
-        <main className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-          <h2 className="text-2xl font-bold text-slate-800">Open Your Credential Wallet</h2>
-          <p className="text-slate-500 max-w-md">
-            Connect a Solana wallet to load your on-chain records, or use the email-issued certificate flow if your institution delivered credentials without a wallet.
-          </p>
-          <WalletMultiButton style={{ background: '#4f46e5', borderRadius: '8px' }} />
-          <a href="/dashboard/email-viewer" className="text-sm font-semibold text-indigo-600 hover:underline">
-            View certificates by email instead
-          </a>
+        <main className="flex-1 w-full">
+          <div className="flex items-start">
+            <Sidebar />
+            <section className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6 py-20">
+              <h2 className="text-2xl font-bold text-slate-800">Open Your Credential Wallet</h2>
+              <p className="text-slate-500 max-w-md">
+                Connect a Solana wallet to load your on-chain records, or use the email-issued certificate flow if your institution delivered credentials without a wallet.
+              </p>
+              <WalletMultiButton style={{ background: '#4f46e5', borderRadius: '8px' }} />
+              <a href="/dashboard/email-viewer" className="text-sm font-semibold text-indigo-600 hover:underline">
+                View certificates by email instead
+              </a>
+            </section>
+          </div>
         </main>
         <Footer />
       </div>
@@ -89,39 +95,44 @@ const StudentProfile = () => {
   return (
     <div className="min-h-screen bg-[#f8f9ff] flex flex-col">
       <Navbar />
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-10">
-            <ProfileHeader profile={profile} />
-            <section className="space-y-6">
-              <div className="flex justify-between items-baseline">
-                <h2 className="text-2xl font-bold text-slate-800">Professional Credentials</h2>
-                <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">
-                  {credentials.length} On-Chain Records
-                </span>
+      <main className="flex-1 w-full">
+        <div className="flex items-start">
+          <Sidebar />
+          <section className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-10">
+                <ProfileHeader profile={profile} />
+                <section className="space-y-6">
+                  <div className="flex justify-between items-baseline">
+                    <h2 className="text-2xl font-bold text-slate-800">Professional Credentials</h2>
+                    <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                      {credentials.length} On-Chain Records
+                    </span>
+                  </div>
+                  {loading ? (
+                    <p className="text-slate-500 animate-pulse">Loading credentials from the blockchain...</p>
+                  ) : error ? (
+                    <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-center text-red-600">
+                      {error}
+                    </div>
+                  ) : credentials.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {credentials.map((cred, index) => (
+                        <CredentialCard key={index} {...cred} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 border border-dashed border-slate-300 rounded-lg text-center text-slate-500">
+                      No credentials found for this wallet yet.
+                    </div>
+                  )}
+                </section>
               </div>
-              {loading ? (
-                <p className="text-slate-500 animate-pulse">Loading credentials from the blockchain...</p>
-              ) : error ? (
-                <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-center text-red-600">
-                  {error}
-                </div>
-              ) : credentials.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {credentials.map((cred, index) => (
-                    <CredentialCard key={index} {...cred} />
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 border border-dashed border-slate-300 rounded-lg text-center text-slate-500">
-                  No credentials found for this wallet yet.
-                </div>
-              )}
-            </section>
-          </div>
-          <div className="lg:col-span-1">
-            <VerificationSidebar shareUrl={shareUrl} />
-          </div>
+              <div className="lg:col-span-1">
+                <VerificationSidebar shareUrl={shareUrl} />
+              </div>
+            </div>
+          </section>
         </div>
       </main>
       <Footer />
