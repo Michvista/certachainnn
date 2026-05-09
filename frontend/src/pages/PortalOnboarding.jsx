@@ -111,10 +111,10 @@ export default function PortalOnboarding() {
                 Three live portals, one trusted credential network
               </div>
               <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-                Route every institution, student, and employer into the right CertaChain workflow.
+                Three users. One seamless flow. Fraud made structurally impossible.
               </h1>
               <p className="max-w-xl text-base leading-7 text-slate-600">
-                Select a portal, add the operational details that make verification useful, and continue into the part of the platform designed for that role.
+                Institutions issue, students own, and employers verify. Select a portal, save the role details that matter, and continue into the workflow built for that user.
               </p>
             </div>
 

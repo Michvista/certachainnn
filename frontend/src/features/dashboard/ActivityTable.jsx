@@ -3,12 +3,13 @@ import Card from '../../components/ui/Card';
 import { getAllCertificates } from '../../utils/api';
 import { Loader2 } from 'lucide-react';
 
-export default function ActivityTable() {
+export default function ActivityTable({ institutionWallet = '', title = 'Recent Activity' }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllCertificates(25)
+    setLoading(true);
+    getAllCertificates(25, { institutionWallet })
       .then(res => {
         if (res.success) {
           setActivities(res.certificates.map(c => ({
@@ -22,11 +23,11 @@ export default function ActivityTable() {
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [institutionWallet]);
 
   return (
     <Card className="overflow-hidden">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
+      <h3 className="text-lg font-bold text-gray-900 mb-4">{title}</h3>
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="animate-spin text-indigo-600" />

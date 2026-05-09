@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Calendar, Download, Search, ArrowUpRight } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
@@ -11,11 +12,13 @@ import { usePortal } from '../../context/PortalContext';
 
 export default function Institution() {
   const navigate = useNavigate();
+  const { publicKey } = useWallet();
   const { getProfile, setActiveRole } = usePortal();
   const [stats, setStats] = useState({ totalCertificates: '--', totalStudents: '--' });
   const [searchWallet, setSearchWallet] = useState('');
   const [allCerts, setAllCerts] = useState([]);
   const institutionProfile = getProfile('institution');
+  const institutionWallet = publicKey?.toBase58() || institutionProfile.walletAddress || '';
 
   const emptySevenDays = useMemo(() => {
     const today = new Date();
@@ -33,11 +36,11 @@ export default function Institution() {
 
   useEffect(() => {
     setActiveRole('institution');
-    getStats().then(res => {
+    getStats({ institutionWallet }).then(res => {
       if (res.success) setStats(res);
     }).catch(() => {});
 
-    getAllCertificates(50).then((res) => {
+    getAllCertificates(50, { institutionWallet }).then((res) => {
       if (res.success) {
         setAllCerts(res.certificates);
         
@@ -59,7 +62,7 @@ export default function Institution() {
         setChartData(lastSevenDays);
       }
     }).catch(() => {});
-  }, [setActiveRole]);
+  }, [institutionWallet, setActiveRole]);
 
   const handleExport = () => {
     if (allCerts.length === 0) return;
@@ -118,7 +121,7 @@ export default function Institution() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StatCard label="Total Certificates Issued" value={stats.totalCertificates} sub="On-chain records" />
-                <StatCard label="Active Students" value={stats.totalStudents} sub="Distinct wallet holders" />
+                <StatCard label="Registered Students" value={stats.totalStudents} sub="Students issued by this institution" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -169,7 +172,7 @@ export default function Institution() {
                 </div>
               </div>
 
-              <ActivityTable />
+              <ActivityTable institutionWallet={institutionWallet} title="Students Registered By This Institution" />
             </div>
           </section>
         </div>

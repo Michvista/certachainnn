@@ -14,12 +14,13 @@ export default function Overview() {
   const [stats, setStats] = useState({ totalCertificates: '--', totalStudents: '--', avgVerificationTime: null });
   const [studentCredentialCount, setStudentCredentialCount] = useState('--');
   const profile = getProfile(activeRole);
+  const institutionWallet = publicKey?.toBase58() || getProfile('institution').walletAddress || '';
 
   useEffect(() => {
-    getStats().then(res => {
+    getStats(activeRole === 'institution' ? { institutionWallet } : {}).then(res => {
       if (res.success) setStats(res);
     }).catch(() => {});
-  }, []);
+  }, [activeRole, institutionWallet]);
 
   useEffect(() => {
     const studentWallet = publicKey?.toBase58() || getProfile('student').walletAddress;
@@ -87,7 +88,7 @@ export default function Overview() {
               ))}
             </div>
 
-            <ActivityTable />
+            <ActivityTable institutionWallet={activeRole === 'institution' ? institutionWallet : ''} />
             </div>
           </div>
         </div>

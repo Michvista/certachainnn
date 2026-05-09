@@ -18,21 +18,21 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
-            CertaChain helps institutions issue tamper-proof certificates, gives students a credible public credential wallet, and lets employers verify skills with blockchain-backed AI analysis.
+            One mint, permanent proof, AI-powered truth. Institutions issue on Solana, students own one shareable credential profile, and employers verify instantly with Gemini-powered skill intelligence.
           </p>
 
           <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Institutions</p>
-              <p className="mt-2 font-semibold text-slate-900">Issue live credentials with wallet or email delivery.</p>
+              <p className="mt-2 font-semibold text-slate-900">Issue certificates in seconds with immutable proof on Solana.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Students</p>
-              <p className="mt-2 font-semibold text-slate-900">Own one public record for every verified achievement.</p>
+              <p className="mt-2 font-semibold text-slate-900">Own one shareable profile for every verified credential, no wallet required.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Employers</p>
-              <p className="mt-2 font-semibold text-slate-900">Verify instantly and generate skill reports from real evidence.</p>
+              <p className="mt-2 font-semibold text-slate-900">Verify instantly and generate AI skill reports from real evidence.</p>
             </div>
           </div>
 

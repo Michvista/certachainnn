@@ -145,16 +145,31 @@ export const getWalletByToken = async (token) => {
   return response.json();
 };
 
-export const getStats = async () => {
-  const response = await fetch(`${API_BASE_URL}/stats`);
+export const getStats = async (options = {}) => {
+  const params = new URLSearchParams();
+  if (options.institutionWallet) {
+    params.set('institutionWallet', options.institutionWallet);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`${API_BASE_URL}/stats${query}`);
   if (!response.ok) {
     throw new Error(await parseError(response, 'Failed to fetch stats'));
   }
   return response.json();
 };
 
-export const getAllCertificates = async (limit) => {
-  const query = typeof limit === 'number' ? `?limit=${limit}` : '';
+export const getAllCertificates = async (limit, options = {}) => {
+  const params = new URLSearchParams();
+  if (typeof limit === 'number') {
+    params.set('limit', String(limit));
+  }
+  if (options.institutionWallet) {
+    params.set('institutionWallet', options.institutionWallet);
+  }
+  if (options.includeMetadata) {
+    params.set('includeMetadata', 'true');
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`${API_BASE_URL}/certificates${query}`);
   if (!response.ok) {
     throw new Error(await parseError(response, 'Failed to fetch certificates'));

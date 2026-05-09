@@ -644,8 +644,14 @@ app.get('/api/users/claim/:token', async (req, res) => {
 
 app.get('/api/stats', async (req, res) => {
   try {
-    const totalCertificates = await prisma.certificate.count();
+    const institutionWallet = typeof req.query.institutionWallet === 'string' && req.query.institutionWallet.trim()
+      ? req.query.institutionWallet.trim()
+      : null;
+    const where = institutionWallet ? { institutionWallet } : undefined;
+
+    const totalCertificates = await prisma.certificate.count({ where });
     const distinctStudents = await prisma.certificate.findMany({
+      where,
       select: { studentWallet: true },
       distinct: ['studentWallet']
     });
@@ -664,14 +670,25 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/certificates', async (req, res) => {
   try {
     const take = Number.parseInt(req.query.limit, 10);
+    const includeMetadata = req.query.includeMetadata === 'true';
+    const institutionWallet = typeof req.query.institutionWallet === 'string' && req.query.institutionWallet.trim()
+      ? req.query.institutionWallet.trim()
+      : null;
     const certificates = await prisma.certificate.findMany({
+      where: institutionWallet ? { institutionWallet } : undefined,
       orderBy: { issueDate: 'desc' },
       take: Number.isFinite(take) && take > 0 ? take : 10
     });
-    const hydratedCertificates = await hydrateCertificates(certificates);
     res.status(200).json({
       success: true,
-      certificates: hydratedCertificates
+      certificates: includeMetadata
+        ? await hydrateCertificates(certificates)
+        : certificates.map((certificate) => ({
+            ...certificate,
+            ipfsGatewayUrl: toGatewayUrl(certificate.ipfsUrl),
+            fileGatewayUrl: toGatewayUrl(certificate.fileUrl),
+            program: PROGRAM_DETAILS
+          }))
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

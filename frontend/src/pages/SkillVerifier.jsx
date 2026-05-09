@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -18,6 +18,7 @@ const SkillVerifier = () => {
   const [aiReport, setAiReport] = useState(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const prefetchedQueryRef = useRef('');
 
   const verificationUrl = studentData 
     ? `${window.location.origin}/verifier?wallet=${studentData.wallet}`
@@ -26,16 +27,6 @@ const SkillVerifier = () => {
   useEffect(() => {
     setActiveRole('employer');
   }, [setActiveRole]);
-
-  useEffect(() => {
-    const walletFromQuery = searchParams.get('wallet');
-    const certificateFromQuery = searchParams.get('certificate');
-    if (walletFromQuery) {
-      setSearchQuery(walletFromQuery);
-    } else if (certificateFromQuery) {
-      setSearchQuery(certificateFromQuery);
-    }
-  }, [searchParams]);
 
   const normalizeCredentials = (credentials, walletAddressOverride) => ({
     name: credentials[0]?.studentName || 'Verified Candidate',
@@ -108,10 +99,14 @@ const SkillVerifier = () => {
   };
 
   useEffect(() => {
-    if (searchQuery && (searchParams.get('wallet') || searchParams.get('certificate'))) {
-      handleVerify();
+    const wallet = searchParams.get('wallet');
+    const certificate = searchParams.get('certificate');
+    const prefilled = wallet || certificate || '';
+    if (prefilled && prefetchedQueryRef.current !== prefilled) {
+      prefetchedQueryRef.current = prefilled;
+      setSearchQuery(prefilled);
     }
-  }, [searchQuery]);
+  }, [searchParams]);
 
   const handleShare = async () => {
     const success = await copyToClipboard(verificationUrl);
@@ -138,7 +133,7 @@ const SkillVerifier = () => {
           <header className="space-y-2">
             <h1 className="text-3xl font-bold text-slate-900">Employer Verification Portal</h1>
             <p className="text-slate-500 text-sm max-w-xl">
-              Paste a wallet address, profile link, or certificate ID to verify a candidate and generate a Gemini-powered skills report from blockchain records and uploaded files.
+              Paste a wallet address, profile link, or certificate ID to get instant on-chain verification plus a Gemini skill report with verified skills, gaps, score, and hiring recommendation.
             </p>
           </header>
 
