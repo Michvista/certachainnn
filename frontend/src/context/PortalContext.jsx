@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'certachain_portal_state_v1';
+const STORAGE_KEY = 'certachain_portal_state_v2';
 
 const defaultState = {
   activeRole: 'institution',

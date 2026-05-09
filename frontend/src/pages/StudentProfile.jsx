@@ -26,6 +26,8 @@ const StudentProfile = () => {
 
   const routeWalletAddress = id && id !== 'me' ? id : null;
   const walletAddress = routeWalletAddress || studentProfile.walletAddress || publicKey?.toBase58() || null;
+  const connectedWalletAddress = publicKey?.toBase58() || null;
+  const shouldSyncSavedProfile = !routeWalletAddress || routeWalletAddress === studentProfile.walletAddress || routeWalletAddress === connectedWalletAddress;
   const profile = credentials[0]
     ? {
         name: credentials[0].studentName || studentProfile.fullName || 'Verified Student',
@@ -52,7 +54,7 @@ const StudentProfile = () => {
       .then(res => {
         if (res.success) {
           const firstCredential = res.credentials[0];
-          if (firstCredential) {
+          if (firstCredential && shouldSyncSavedProfile) {
             updateProfile('student', {
               fullName: firstCredential.studentName || studentProfile.fullName,
               courseTrack: firstCredential.course || studentProfile.courseTrack,
@@ -77,7 +79,7 @@ const StudentProfile = () => {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [studentProfile.courseTrack, studentProfile.fullName, studentProfile.school, updateProfile, walletAddress]);
+  }, [studentProfile.courseTrack, studentProfile.fullName, studentProfile.school, shouldSyncSavedProfile, updateProfile, walletAddress]);
 
   if (!walletAddress) {
     return (
