@@ -24,7 +24,8 @@ const StudentProfile = () => {
     setActiveRole('student');
   }, [setActiveRole]);
 
-  const walletAddress = publicKey?.toBase58() || (id && id !== 'me' ? id : null) || studentProfile.walletAddress || null;
+  const routeWalletAddress = id && id !== 'me' ? id : null;
+  const walletAddress = routeWalletAddress || studentProfile.walletAddress || publicKey?.toBase58() || null;
   const profile = credentials[0]
     ? {
         name: credentials[0].studentName || studentProfile.fullName || 'Verified Student',

@@ -23,7 +23,7 @@ export default function Overview() {
   }, [activeRole, institutionWallet]);
 
   useEffect(() => {
-    const studentWallet = publicKey?.toBase58() || getProfile('student').walletAddress;
+    const studentWallet = getProfile('student').walletAddress || publicKey?.toBase58();
     if (!studentWallet) {
       return;
     }
